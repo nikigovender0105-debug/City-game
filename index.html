@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Stadtbauer – Mobile City Builder</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#141821">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏙️</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="rotateHint">
+  <div>
+    <div class="rot-icon">📱</div>
+    <h2>Bitte im Hochformat spielen</h2>
+    <p>Dieses Spiel ist für den vertikalen Modus gemacht.</p>
+  </div>
+</div>
+
+<div id="app">
+
+  <!-- ============ KOPFLEISTE ============ -->
+  <header id="topbar">
+    <div class="stat money" id="statMoney">
+      <span class="ic">💶</span><span class="val">0 €</span>
+    </div>
+    <div class="stat" id="statPop">
+      <span class="ic">👪</span><span class="val">0</span>
+    </div>
+    <div class="stat" id="statMorale">
+      <span class="ic">😀</span><span class="val">50%</span>
+    </div>
+    <div class="stat" id="statPower">
+      <span class="ic">⚡</span><span class="val">0/0</span>
+    </div>
+    <div class="stat" id="statWater">
+      <span class="ic">💧</span><span class="val">0/0</span>
+    </div>
+  </header>
+
+  <div id="subbar">
+    <div id="dateLabel">Jan 0001</div>
+    <div id="balanceLabel" class="pos">+0 €/Mon</div>
+    <div id="speedCtl">
+      <button data-speed="0" class="spd">⏸</button>
+      <button data-speed="1" class="spd active">▶</button>
+      <button data-speed="3" class="spd">▶▶</button>
+      <button data-speed="8" class="spd">▶▶▶</button>
+    </div>
+  </div>
+
+  <!-- ============ SPIELFELD ============ -->
+  <main id="stage">
+    <canvas id="game"></canvas>
+    <div id="ticker"></div>
+    <div id="hintBubble" class="hidden"></div>
+  </main>
+
+  <!-- ============ AUSWAHL-LEISTE (aktives Werkzeug) ============ -->
+  <div id="toolbar" class="hidden">
+    <div class="tool-info">
+      <span id="toolIcon">🏠</span>
+      <div>
+        <div id="toolName">Familienhaus</div>
+        <div id="toolMeta">120 € · ⚡3 · 💧3</div>
+      </div>
+    </div>
+    <button id="toolCancel">✕</button>
+  </div>
+
+  <!-- ============ FUSSLEISTE ============ -->
+  <nav id="bottombar">
+    <button class="nav-btn" data-panel="build"><span>🏗️</span>Bauen</button>
+    <button class="nav-btn" data-tool="bulldoze"><span>🚜</span>Abriss</button>
+    <button class="nav-btn" data-panel="tax"><span>🧾</span>Steuern</button>
+    <button class="nav-btn" data-panel="stats"><span>📊</span>Stadt</button>
+    <button class="nav-btn" data-panel="menu"><span>⚙️</span>Menü</button>
+  </nav>
+
+  <!-- ============ BAU-PANEL ============ -->
+  <section class="sheet" id="panel-build">
+    <div class="sheet-head">
+      <h3>Baumenü</h3>
+      <button class="sheet-close">✕</button>
+    </div>
+    <div id="catTabs" class="cat-tabs"></div>
+    <div id="buildGrid" class="build-grid"></div>
+  </section>
+
+  <!-- ============ STEUER-PANEL ============ -->
+  <section class="sheet" id="panel-tax">
+    <div class="sheet-head">
+      <h3>Steuern &amp; Haushalt</h3>
+      <button class="sheet-close">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="slider-row">
+        <label>Wohnsteuer <b id="taxResVal">10%</b></label>
+        <input type="range" id="taxRes" min="0" max="40" value="10">
+        <small id="taxResHint"></small>
+      </div>
+      <div class="slider-row">
+        <label>Gewerbesteuer <b id="taxComVal">12%</b></label>
+        <input type="range" id="taxCom" min="0" max="40" value="12">
+        <small id="taxComHint"></small>
+      </div>
+
+      <h4>Monatsbilanz</h4>
+      <table class="budget" id="budgetTable"></table>
+    </div>
+  </section>
+
+  <!-- ============ STATISTIK-PANEL ============ -->
+  <section class="sheet" id="panel-stats">
+    <div class="sheet-head">
+      <h3>Stadtübersicht</h3>
+      <button class="sheet-close">✕</button>
+    </div>
+    <div class="sheet-body" id="statsBody"></div>
+  </section>
+
+  <!-- ============ MENÜ-PANEL ============ -->
+  <section class="sheet" id="panel-menu">
+    <div class="sheet-head">
+      <h3>Menü</h3>
+      <button class="sheet-close">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="menu-btns">
+        <button id="btnSave">💾 Speichern</button>
+        <button id="btnLoad">📂 Laden</button>
+        <button id="btnNew">🌱 Neue Stadt</button>
+      </div>
+      <label class="check"><input type="checkbox" id="optGrid" checked> Raster anzeigen</label>
+      <label class="check"><input type="checkbox" id="optOverlay"> Versorgungs-Ansicht (Strom/Wasser)</label>
+      <h4>Kurzanleitung</h4>
+      <ul class="help">
+        <li>Ziehen = Karte bewegen, zwei Finger = zoomen.</li>
+        <li>Jedes Gebäude braucht eine <b>angrenzende Straße</b>.</li>
+        <li>Strom fließt über <b>Straßen und Stromkabel</b>, Wasser über <b>Straßen</b> (Rohre).</li>
+        <li>Wasserpumpen &amp; Wasserkraftwerke müssen ans <b>Wasser</b> grenzen (See/Fluss/Baggersee).</li>
+        <li>Hohe Steuern und Verbrechen senken die <b>Moral</b> – Schulen, Freizeit &amp; ÖPNV heben sie.</li>
+        <li>Auf ein gebautes Gebäude tippen zeigt Details, langes Tippen reißt es ab.</li>
+      </ul>
+      <p class="version">Stadtbauer v1.0</p>
+    </div>
+  </section>
+
+  <div id="scrim"></div>
+
+  <!-- ============ INFO-DIALOG ============ -->
+  <div id="infoDialog" class="dialog hidden">
+    <div class="dialog-box">
+      <h3 id="infoTitle">Gebäude</h3>
+      <div id="infoBody"></div>
+      <div class="dialog-actions">
+        <button id="infoDemolish" class="danger">🚜 Abreißen</button>
+        <button id="infoClose">Schließen</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/terrain.js"></script>
+<script src="js/game.js"></script>
+<script src="js/render.js"></script>
+<script src="js/input.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
