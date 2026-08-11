@@ -8,6 +8,17 @@ Läuft komplett im Browser – kein Server, kein Build-Schritt, keine Abhängigk
 `index.html` im Browser öffnen. Auf dem Handy: Seite öffnen → „Zum Home-Bildschirm hinzufügen“,
 dann läuft es im Vollbild wie eine App.
 
+Alternativ **`stadtbauer.html`** – dieselbe Spielversion als eine einzige Datei mit
+eingebettetem CSS und JavaScript. Praktisch zum Verschicken oder Offline-Spielen:
+einfach öffnen, es wird nichts nachgeladen. Die Datei wird erzeugt mit:
+
+```bash
+node build-single.js
+```
+
+Nach Änderungen an `index.html`, `css/` oder `js/` neu ausführen, sonst bleibt sie
+auf dem alten Stand.
+
 Lokal mit Server (empfohlen, damit `localStorage` sicher funktioniert):
 
 ```bash

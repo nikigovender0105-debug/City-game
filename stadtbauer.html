@@ -1,0 +1,3028 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Stadtbauer – Mobile City Builder</title>
+<!-- Einzeldatei-Version, erzeugt von build-single.js. Nicht von Hand bearbeiten. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#141821">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏙️</text></svg>">
+<style>
+/* ==========================================================
+   Stadtbauer – Mobile City Builder (Hochformat)
+   ========================================================== */
+
+:root{
+  --bg:#0f131a;
+  --panel:#181d27;
+  --panel-2:#212836;
+  --line:#2c3446;
+  --txt:#e8edf6;
+  --txt-dim:#93a0b8;
+  --accent:#4ea8ff;
+  --good:#49d18a;
+  --bad:#ff6b6b;
+  --warn:#ffc95c;
+  --topbar-h:44px;
+  --subbar-h:30px;
+  --bottom-h:60px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+}
+
+*{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+html,body{
+  margin:0; padding:0;
+  height:100%; width:100%;
+  overflow:hidden;
+  overscroll-behavior:none;
+  background:var(--bg);
+  color:var(--txt);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  font-size:14px;
+  user-select:none;
+  -webkit-user-select:none;
+  touch-action:none;
+}
+
+button{
+  font-family:inherit; color:inherit;
+  background:none; border:none; padding:0; margin:0;
+  cursor:pointer;
+}
+
+#app{
+  position:fixed; inset:0;
+  display:flex; flex-direction:column;
+  padding-top:var(--safe-t);
+  padding-bottom:var(--safe-b);
+}
+
+/* ---------- Querformat-Hinweis ---------- */
+#rotateHint{
+  display:none;
+  position:fixed; inset:0; z-index:9999;
+  background:var(--bg);
+  align-items:center; justify-content:center;
+  text-align:center; padding:24px;
+}
+#rotateHint .rot-icon{ font-size:64px; animation:tilt 2s ease-in-out infinite; }
+@keyframes tilt{ 0%,100%{transform:rotate(0)} 50%{transform:rotate(-90deg)} }
+@media (orientation:landscape) and (max-height:480px){
+  #rotateHint{ display:flex; }
+}
+
+/* ---------- Kopfleiste ---------- */
+#topbar{
+  height:var(--topbar-h); flex:0 0 auto;
+  display:flex; align-items:center; gap:2px;
+  padding:0 6px;
+  background:var(--panel);
+  border-bottom:1px solid var(--line);
+}
+#topbar .stat{
+  flex:1 1 0; min-width:0;
+  display:flex; align-items:center; justify-content:center; gap:3px;
+  font-size:12px; font-weight:600;
+  white-space:nowrap; overflow:hidden;
+}
+#topbar .stat .ic{ font-size:14px; }
+#topbar .stat .val{ overflow:hidden; text-overflow:ellipsis; }
+#topbar .money .val{ color:var(--good); }
+#topbar .money.broke .val{ color:var(--bad); }
+.val.warn{ color:var(--warn); }
+.val.bad{ color:var(--bad); }
+
+/* ---------- Zweite Leiste ---------- */
+#subbar{
+  height:var(--subbar-h); flex:0 0 auto;
+  display:flex; align-items:center; gap:8px;
+  padding:0 8px;
+  background:var(--panel-2);
+  border-bottom:1px solid var(--line);
+  font-size:11px;
+}
+#dateLabel{ color:var(--txt-dim); min-width:64px; }
+#balanceLabel{ flex:1; font-weight:700; }
+#balanceLabel.pos{ color:var(--good); }
+#balanceLabel.neg{ color:var(--bad); }
+#speedCtl{ display:flex; gap:3px; }
+.spd{
+  padding:2px 7px; border-radius:5px;
+  background:#2c3446; font-size:10px; line-height:1.4;
+}
+.spd.active{ background:var(--accent); color:#07121e; font-weight:700; }
+
+/* ---------- Spielfeld ---------- */
+#stage{
+  position:relative; flex:1 1 auto; overflow:hidden;
+  background:#1c2b1e;
+}
+#game{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+
+#ticker{
+  position:absolute; left:8px; right:8px; top:8px;
+  display:flex; flex-direction:column; gap:4px;
+  pointer-events:none;
+}
+.msg{
+  align-self:flex-start;
+  background:rgba(15,19,26,.88);
+  border-left:3px solid var(--accent);
+  border-radius:6px;
+  padding:5px 9px; font-size:11.5px;
+  animation:slideIn .25s ease;
+  max-width:100%;
+}
+.msg.bad{ border-color:var(--bad); }
+.msg.good{ border-color:var(--good); }
+.msg.warn{ border-color:var(--warn); }
+@keyframes slideIn{ from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:none} }
+
+#hintBubble{
+  position:absolute; bottom:10px; left:50%; transform:translateX(-50%);
+  background:rgba(15,19,26,.92); border:1px solid var(--line);
+  border-radius:16px; padding:6px 14px; font-size:11.5px;
+  pointer-events:none; white-space:nowrap;
+}
+.hidden{ display:none !important; }
+
+/* ---------- Werkzeugleiste ---------- */
+#toolbar{
+  flex:0 0 auto;
+  display:flex; align-items:center; gap:10px;
+  padding:6px 10px;
+  background:var(--panel-2);
+  border-top:1px solid var(--line);
+}
+.tool-info{ display:flex; align-items:center; gap:9px; flex:1; min-width:0; }
+#toolIcon{ font-size:22px; }
+#toolName{ font-weight:700; font-size:13px; }
+#toolMeta{ font-size:10.5px; color:var(--txt-dim); }
+#toolCancel{
+  width:32px; height:32px; border-radius:8px;
+  background:#333c4f; font-size:14px;
+}
+
+/* ---------- Fußleiste ---------- */
+#bottombar{
+  height:var(--bottom-h); flex:0 0 auto;
+  display:flex;
+  background:var(--panel);
+  border-top:1px solid var(--line);
+}
+.nav-btn{
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:3px;
+  font-size:10px; color:var(--txt-dim);
+}
+.nav-btn span{ font-size:20px; line-height:1; }
+.nav-btn.active{ color:var(--accent); }
+
+/* ---------- Bottom-Sheets ---------- */
+.sheet{
+  position:fixed; left:0; right:0; bottom:0; z-index:60;
+  max-height:72%;
+  background:var(--panel);
+  border-top:1px solid var(--line);
+  border-radius:16px 16px 0 0;
+  transform:translateY(102%);
+  transition:transform .22s ease;
+  display:flex; flex-direction:column;
+  padding-bottom:var(--safe-b);
+}
+.sheet.open{ transform:translateY(0); }
+.sheet-head{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 14px 8px;
+  border-bottom:1px solid var(--line);
+}
+.sheet-head h3{ margin:0; font-size:15px; }
+.sheet-close{ font-size:16px; width:30px; height:30px; border-radius:8px; background:#2c3446; }
+.sheet-body{ overflow-y:auto; padding:12px 14px 20px; -webkit-overflow-scrolling:touch; touch-action:pan-y; }
+
+#scrim{
+  position:fixed; inset:0; z-index:55;
+  background:rgba(0,0,0,.45);
+  opacity:0; pointer-events:none;
+  transition:opacity .2s;
+}
+#scrim.on{ opacity:1; pointer-events:auto; }
+
+/* ---------- Kategorie-Tabs ---------- */
+.cat-tabs{
+  display:flex; gap:6px; overflow-x:auto;
+  padding:10px 12px; border-bottom:1px solid var(--line);
+  touch-action:pan-x;
+}
+.cat-tabs::-webkit-scrollbar{ display:none; }
+.cat{
+  flex:0 0 auto;
+  padding:6px 10px; border-radius:14px;
+  background:var(--panel-2); font-size:11px; white-space:nowrap;
+  display:flex; align-items:center; gap:4px;
+}
+.cat.active{ background:var(--accent); color:#07121e; font-weight:700; }
+
+/* ---------- Bau-Raster ---------- */
+.build-grid{
+  overflow-y:auto; padding:10px 12px 24px;
+  display:grid; grid-template-columns:repeat(3,1fr); gap:8px;
+  touch-action:pan-y;
+}
+.bcard{
+  background:var(--panel-2); border:1px solid var(--line);
+  border-radius:11px; padding:8px 6px;
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+  text-align:center; position:relative;
+}
+.bcard .bi{ font-size:24px; line-height:1.1; }
+.bcard .bn{ font-size:10.5px; font-weight:600; line-height:1.2; }
+.bcard .bc{ font-size:10px; color:var(--good); font-weight:700; }
+.bcard .bs{ font-size:9px; color:var(--txt-dim); }
+.bcard.disabled{ opacity:.42; }
+.bcard.disabled .bc{ color:var(--bad); }
+.bcard:active{ transform:scale(.96); }
+
+/* ---------- Steuer-Panel ---------- */
+.slider-row{ margin-bottom:18px; }
+.slider-row label{ display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:6px; }
+.slider-row label b{ color:var(--accent); }
+.slider-row input[type=range]{
+  width:100%; height:26px; -webkit-appearance:none; background:transparent;
+  touch-action:none;
+}
+input[type=range]::-webkit-slider-runnable-track{
+  height:5px; border-radius:3px; background:#38415a;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:22px; height:22px; border-radius:50%;
+  background:var(--accent); margin-top:-8.5px; border:2px solid #0f131a;
+}
+input[type=range]::-moz-range-track{ height:5px; border-radius:3px; background:#38415a; }
+input[type=range]::-moz-range-thumb{ width:20px;height:20px;border:2px solid #0f131a;border-radius:50%;background:var(--accent); }
+.slider-row small{ display:block; margin-top:4px; font-size:10.5px; color:var(--txt-dim); }
+
+h4{ margin:16px 0 8px; font-size:12.5px; color:var(--txt-dim); text-transform:uppercase; letter-spacing:.5px; }
+
+table.budget{ width:100%; border-collapse:collapse; font-size:12px; }
+table.budget td{ padding:5px 0; border-bottom:1px solid var(--line); }
+table.budget td:last-child{ text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
+table.budget tr.total td{ border-bottom:none; padding-top:9px; font-size:13.5px; font-weight:800; }
+.g{ color:var(--good); } .r{ color:var(--bad); }
+
+/* ---------- Statistik ---------- */
+.stat-block{ margin-bottom:14px; }
+.stat-block h5{ margin:0 0 6px; font-size:12px; color:var(--txt-dim); }
+.bar{
+  position:relative; height:20px; border-radius:6px;
+  background:#2c3446; overflow:hidden; margin-bottom:5px;
+}
+.bar > i{
+  position:absolute; inset:0 auto 0 0; display:block;
+  background:linear-gradient(90deg,#3f8ddb,#4ea8ff);
+  border-radius:6px; transition:width .3s;
+}
+.bar > span{
+  position:absolute; inset:0; display:flex; align-items:center;
+  justify-content:space-between; padding:0 7px;
+  font-size:10.5px; font-weight:600; text-shadow:0 1px 2px #000;
+}
+.bar.ok > i{ background:linear-gradient(90deg,#2f9c68,#49d18a); }
+.bar.warn > i{ background:linear-gradient(90deg,#c99334,#ffc95c); }
+.bar.bad > i{ background:linear-gradient(90deg,#c04a4a,#ff6b6b); }
+
+.kv{ display:flex; justify-content:space-between; font-size:12px; padding:4px 0; border-bottom:1px solid var(--line); }
+.kv b{ font-variant-numeric:tabular-nums; }
+
+/* ---------- Menü ---------- */
+.menu-btns{ display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+.menu-btns button{
+  padding:11px; border-radius:10px; background:var(--panel-2);
+  border:1px solid var(--line); font-size:13px; text-align:left;
+}
+.check{ display:flex; align-items:center; gap:8px; font-size:12.5px; padding:7px 0; }
+.check input{ width:17px; height:17px; accent-color:var(--accent); }
+ul.help{ margin:6px 0; padding-left:18px; font-size:11.5px; color:var(--txt-dim); line-height:1.65; }
+.version{ font-size:10px; color:#59637a; text-align:center; margin-top:16px; }
+
+/* ---------- Dialog ---------- */
+.dialog{
+  position:fixed; inset:0; z-index:80;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.55); padding:22px;
+}
+.dialog-box{
+  width:100%; max-width:330px;
+  background:var(--panel); border:1px solid var(--line);
+  border-radius:14px; padding:16px;
+}
+.dialog-box h3{ margin:0 0 10px; font-size:15px; }
+#infoBody{ font-size:12px; }
+.dialog-actions{ display:flex; gap:8px; margin-top:14px; }
+.dialog-actions button{
+  flex:1; padding:10px; border-radius:9px;
+  background:var(--panel-2); border:1px solid var(--line); font-size:12.5px;
+}
+.dialog-actions .danger{ background:#5a2630; border-color:#7a3340; color:#ffd6da; }
+
+</style>
+</head>
+<body>
+
+<div id="rotateHint">
+  <div>
+    <div class="rot-icon">📱</div>
+    <h2>Bitte im Hochformat spielen</h2>
+    <p>Dieses Spiel ist für den vertikalen Modus gemacht.</p>
+  </div>
+</div>
+
+<div id="app">
+
+  <!-- ============ KOPFLEISTE ============ -->
+  <header id="topbar">
+    <div class="stat money" id="statMoney">
+      <span class="ic">💶</span><span class="val">0 €</span>
+    </div>
+    <div class="stat" id="statPop">
+      <span class="ic">👪</span><span class="val">0</span>
+    </div>
+    <div class="stat" id="statMorale">
+      <span class="ic">😀</span><span class="val">50%</span>
+    </div>
+    <div class="stat" id="statPower">
+      <span class="ic">⚡</span><span class="val">0/0</span>
+    </div>
+    <div class="stat" id="statWater">
+      <span class="ic">💧</span><span class="val">0/0</span>
+    </div>
+  </header>
+
+  <div id="subbar">
+    <div id="dateLabel">Jan 0001</div>
+    <div id="balanceLabel" class="pos">+0 €/Mon</div>
+    <div id="speedCtl">
+      <button data-speed="0" class="spd">⏸</button>
+      <button data-speed="1" class="spd active">▶</button>
+      <button data-speed="3" class="spd">▶▶</button>
+      <button data-speed="8" class="spd">▶▶▶</button>
+    </div>
+  </div>
+
+  <!-- ============ SPIELFELD ============ -->
+  <main id="stage">
+    <canvas id="game"></canvas>
+    <div id="ticker"></div>
+    <div id="hintBubble" class="hidden"></div>
+  </main>
+
+  <!-- ============ AUSWAHL-LEISTE (aktives Werkzeug) ============ -->
+  <div id="toolbar" class="hidden">
+    <div class="tool-info">
+      <span id="toolIcon">🏠</span>
+      <div>
+        <div id="toolName">Familienhaus</div>
+        <div id="toolMeta">120 € · ⚡3 · 💧3</div>
+      </div>
+    </div>
+    <button id="toolCancel">✕</button>
+  </div>
+
+  <!-- ============ FUSSLEISTE ============ -->
+  <nav id="bottombar">
+    <button class="nav-btn" data-panel="build"><span>🏗️</span>Bauen</button>
+    <button class="nav-btn" data-tool="bulldoze"><span>🚜</span>Abriss</button>
+    <button class="nav-btn" data-panel="tax"><span>🧾</span>Steuern</button>
+    <button class="nav-btn" data-panel="stats"><span>📊</span>Stadt</button>
+    <button class="nav-btn" data-panel="menu"><span>⚙️</span>Menü</button>
+  </nav>
+
+  <!-- ============ BAU-PANEL ============ -->
+  <section class="sheet" id="panel-build">
+    <div class="sheet-head">
+      <h3>Baumenü</h3>
+      <button class="sheet-close">✕</button>
+    </div>
+    <div id="catTabs" class="cat-tabs"></div>
+    <div id="buildGrid" class="build-grid"></div>
+  </section>
+
+  <!-- ============ STEUER-PANEL ============ -->
+  <section class="sheet" id="panel-tax">
+    <div class="sheet-head">
+      <h3>Steuern &amp; Haushalt</h3>
+      <button class="sheet-close">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="slider-row">
+        <label>Wohnsteuer <b id="taxResVal">10%</b></label>
+        <input type="range" id="taxRes" min="0" max="40" value="10">
+        <small id="taxResHint"></small>
+      </div>
+      <div class="slider-row">
+        <label>Gewerbesteuer <b id="taxComVal">12%</b></label>
+        <input type="range" id="taxCom" min="0" max="40" value="12">
+        <small id="taxComHint"></small>
+      </div>
+
+      <h4>Monatsbilanz</h4>
+      <table class="budget" id="budgetTable"></table>
+    </div>
+  </section>
+
+  <!-- ============ STATISTIK-PANEL ============ -->
+  <section class="sheet" id="panel-stats">
+    <div class="sheet-head">
+      <h3>Stadtübersicht</h3>
+      <button class="sheet-close">✕</button>
+    </div>
+    <div class="sheet-body" id="statsBody"></div>
+  </section>
+
+  <!-- ============ MENÜ-PANEL ============ -->
+  <section class="sheet" id="panel-menu">
+    <div class="sheet-head">
+      <h3>Menü</h3>
+      <button class="sheet-close">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="menu-btns">
+        <button id="btnSave">💾 Speichern</button>
+        <button id="btnLoad">📂 Laden</button>
+        <button id="btnNew">🌱 Neue Stadt</button>
+      </div>
+      <label class="check"><input type="checkbox" id="optGrid" checked> Raster anzeigen</label>
+      <label class="check"><input type="checkbox" id="optOverlay"> Versorgungs-Ansicht (Strom/Wasser)</label>
+      <h4>Kurzanleitung</h4>
+      <ul class="help">
+        <li>Ziehen = Karte bewegen, zwei Finger = zoomen.</li>
+        <li>Jedes Gebäude braucht eine <b>angrenzende Straße</b>.</li>
+        <li>Strom fließt über <b>Straßen und Stromkabel</b>, Wasser über <b>Straßen</b> (Rohre).</li>
+        <li>Wasserpumpen &amp; Wasserkraftwerke müssen ans <b>Wasser</b> grenzen (See/Fluss/Baggersee).</li>
+        <li>Hohe Steuern und Verbrechen senken die <b>Moral</b> – Schulen, Freizeit &amp; ÖPNV heben sie.</li>
+        <li>Auf ein gebautes Gebäude tippen zeigt Details, langes Tippen reißt es ab.</li>
+      </ul>
+      <p class="version">Stadtbauer v1.0</p>
+    </div>
+  </section>
+
+  <div id="scrim"></div>
+
+  <!-- ============ INFO-DIALOG ============ -->
+  <div id="infoDialog" class="dialog hidden">
+    <div class="dialog-box">
+      <h3 id="infoTitle">Gebäude</h3>
+      <div id="infoBody"></div>
+      <div class="dialog-actions">
+        <button id="infoDemolish" class="danger">🚜 Abreißen</button>
+        <button id="infoClose">Schließen</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ===== js/config.js ===== */
+/* ==========================================================
+   config.js – Spielkonstanten & Gebäudekatalog
+   ========================================================== */
+
+const CONFIG = {
+  MAP_W: 46,
+  MAP_H: 74,
+  TILE: 26,             // Basis-Pixelgröße einer Kachel
+  MIN_ZOOM: 0.55,
+  MAX_ZOOM: 2.6,
+  START_MONEY: 25000,
+  DAY_MS: 900,          // Realzeit pro Spieltag bei Geschwindigkeit 1x
+  DAYS_PER_MONTH: 30,
+
+  // Preise für Betriebsmittel (€ pro Einheit und Monat)
+  PRICE_POWER: 2.4,
+  PRICE_WATER: 1.8,
+
+  // Durchschnittliches Monatseinkommen eines Einwohners (Bemessungsgrundlage)
+  INCOME_PER_CITIZEN: 145,
+  // Umsatz-Bemessungsgrundlage je Gewerbe-Punkt
+  REVENUE_PER_COMMERCE: 1.15,
+
+  DEMOLISH_REFUND: 0.35, // Anteil der Baukosten, den man beim Abriss zurückbekommt
+};
+
+/* ---------- Terrain ---------- */
+const T = { GRASS:0, WATER:1, TREE:2, SAND:3, ROCK:4 };
+
+const TERRAIN_COLORS = {
+  [T.GRASS]: '#4a7c46',
+  [T.WATER]: '#2c6ea8',
+  [T.TREE]:  '#33612f',
+  [T.SAND]:  '#c2ab74',
+  [T.ROCK]:  '#6e6b63',
+};
+
+/* ---------- Kategorien des Baumenüs ---------- */
+const CATEGORIES = [
+  { id:'infra',  name:'Wege & Netz', icon:'🛣️' },
+  { id:'res',    name:'Wohnen',      icon:'🏠' },
+  { id:'power',  name:'Strom',       icon:'⚡' },
+  { id:'water',  name:'Wasser',      icon:'💧' },
+  { id:'edu',    name:'Bildung',     icon:'🎓' },
+  { id:'health', name:'Gesundheit',  icon:'🏥' },
+  { id:'safety', name:'Sicherheit',  icon:'🚓' },
+  { id:'fun',    name:'Freizeit',    icon:'🎡' },
+  { id:'transit',name:'ÖPNV',        icon:'🚌' },
+  { id:'shop',   name:'Gewerbe',     icon:'🛒' },
+  { id:'park',   name:'Parken',      icon:'🅿️' },
+  { id:'deco',   name:'Deko',        icon:'⛲' },
+];
+
+/*  Gebäudefelder
+    ------------------------------------------------------------------
+    cat        Kategorie-ID
+    cost       Baukosten (€)
+    upkeep     Unterhalt (€/Monat)
+    size       [Breite, Höhe] in Kacheln
+    power      Strombedarf (Einheiten) – negativ wäre Erzeugung, dafür 'powerGen'
+    powerGen   Stromerzeugung
+    water      Wasserbedarf
+    waterGen   Wassererzeugung
+    residents  Wohnplätze
+    jobs       Arbeitsplätze
+    commerce   Gewerbe-Punkte (Basis der Gewerbesteuer)
+    edu        Schulplätze
+    health     Behandlungsplätze
+    police     Polizei-Abdeckung (Einwohner)
+    fire       Feuerwehr-Abdeckung (Einwohner)
+    jail       Gefängnisplätze
+    leisure    Freizeitpunkte
+    transit    ÖPNV-Kapazität (Einwohner)
+    parking    Parkplätze
+    beauty     Schönheit / Attraktivität
+    pollution  Umweltverschmutzung
+    needsRoad  Straßenanschluss nötig (Standard: true)
+    needsWater Muss ans Wasser grenzen
+    onWater    Darf/Muss auf Wasser gebaut werden
+    net        'road' | 'cable'  (Netzwerkelement statt Gebäude)
+*/
+const BUILDINGS = {
+
+  /* ---------------- Wege & Netz ---------------- */
+  road: {
+    name:'Straße', cat:'infra', icon:'🛣️', cost:14, upkeep:0.6,
+    size:[1,1], net:'road', color:'#565f70', drag:true,
+    desc:'Grundlage von allem. Leitet Verkehr, Strom und (unterirdisch) Wasser.'
+  },
+  cable: {
+    name:'Stromkabel', cat:'infra', icon:'🔌', cost:9, upkeep:0.3,
+    size:[1,1], net:'cable', color:'#8a7a4e', drag:true,
+    desc:'Überbrückt Strecken ohne Straße. Leitet nur Strom, keinen Verkehr.'
+  },
+  bridge: {
+    name:'Brücke', cat:'infra', icon:'🌉', cost:120, upkeep:2,
+    size:[1,1], net:'road', color:'#7d8595', drag:true, onWater:true,
+    desc:'Straße über Wasser. Nur auf Wasserkacheln baubar.'
+  },
+
+  /* ---------------- Wohnen ---------------- */
+  familienhaus: {
+    name:'Familienhaus', cat:'res', icon:'🏠', cost:150, upkeep:1,
+    size:[1,1], residents:6, power:3, water:4, color:'#c98f5e',
+    desc:'Kleines Einfamilienhaus für bis zu 6 Bewohner.'
+  },
+  reihenhaus: {
+    name:'Reihenhaus', cat:'res', icon:'🏘️', cost:420, upkeep:3,
+    size:[2,1], residents:20, power:9, water:12, color:'#b8794f',
+    desc:'Verdichtetes Wohnen – gutes Verhältnis von Fläche zu Bewohnern.'
+  },
+  wohnblock: {
+    name:'Wohnblock', cat:'res', icon:'🏢', cost:1100, upkeep:9,
+    size:[2,2], residents:64, power:26, water:34, color:'#a8724f',
+    desc:'Mehrfamilienhaus mit 64 Wohnplätzen.'
+  },
+  hochhaus: {
+    name:'Hochhaus', cat:'res', icon:'🏙️', cost:3200, upkeep:26,
+    size:[2,2], residents:190, power:78, water:96, color:'#8e6a55',
+    minMorale:55,
+    desc:'Wolkenkratzer. Zieht nur bei guter Stadtmoral (ab 55%) Bewohner an.'
+  },
+
+  /* ---------------- Strom ---------------- */
+  windkraftwerk: {
+    name:'Windkraftwerk', cat:'power', icon:'🌬️', cost:900, upkeep:26,
+    size:[1,1], powerGen:60, needsRoad:false, color:'#d7dde8',
+    desc:'Sauber und günstig, aber wenig Leistung. Braucht keine Straße – Anschluss per Stromkabel genügt.'
+  },
+  solarkraftwerk: {
+    name:'Solarkraftwerk', cat:'power', icon:'☀️', cost:2200, upkeep:34,
+    size:[2,2], powerGen:150, needsRoad:false, color:'#3b4a6b',
+    desc:'Saubere Energie auf großer Fläche. Anschluss per Stromkabel genügt.'
+  },
+  kohlekraftwerk: {
+    name:'Kohlekraftwerk', cat:'power', icon:'🏭', cost:3600, upkeep:130,
+    size:[3,3], powerGen:800, water:40, pollution:70, needsRoad:false, color:'#4d4a48',
+    desc:'Viel Leistung, aber starke Verschmutzung. Braucht Kühlwasser – also einen Straßenanschluss für die Wasserleitung.'
+  },
+  wasserkraftwerk: {
+    name:'Wasserkraftwerk', cat:'power', icon:'🌊', cost:5200, upkeep:95,
+    size:[3,2], powerGen:520, needsWater:true, needsRoad:false, color:'#3e6f8e',
+    desc:'Starke, saubere Energie. Muss direkt ans Wasser grenzen; Anschluss per Stromkabel genügt.'
+  },
+
+  /* ---------------- Wasser ---------------- */
+  wasserpumpe: {
+    name:'Wasserpumpe', cat:'water', icon:'⛽', cost:700, upkeep:18,
+    size:[2,2], waterGen:220, power:14, needsWater:true, color:'#4f8fb3',
+    desc:'Fördert Wasser aus See oder Fluss. Muss ans Wasser grenzen.'
+  },
+  wasserturm: {
+    name:'Wasserturm', cat:'water', icon:'🗼', cost:1500, upkeep:30,
+    size:[2,2], waterGen:420, power:30, color:'#6aa3c4',
+    desc:'Große Wasserversorgung, unabhängig von Gewässern – dafür stromhungrig.'
+  },
+  klaeranlage: {
+    name:'Kläranlage', cat:'water', icon:'♻️', cost:2400, upkeep:60,
+    size:[3,2], waterGen:600, power:55, pollution:15, color:'#5d7a6a',
+    desc:'Bereitet Abwasser auf – die effizienteste Wasserquelle für Großstädte.'
+  },
+
+  /* ---------------- Bildung ---------------- */
+  kindergarten: {
+    name:'Kindergarten', cat:'edu', icon:'🧸', cost:600, upkeep:22,
+    size:[2,1], edu:180, power:8, water:9, leisure:40, color:'#d8a03c',
+    desc:'Frühe Betreuung – hebt Moral bei jungen Familien.'
+  },
+  grundschule: {
+    name:'Grundschule', cat:'edu', icon:'🏫', cost:1400, upkeep:52,
+    size:[3,2], edu:520, power:22, water:26, color:'#c98b3a',
+    desc:'Bildung für die Kleinsten. 520 Schulplätze.'
+  },
+  gymnasium: {
+    name:'Gymnasium', cat:'edu', icon:'🎓', cost:2900, upkeep:105,
+    size:[3,3], edu:1100, power:44, water:50, color:'#b57c33',
+    desc:'Weiterführende Schule mit 1100 Plätzen.'
+  },
+  universitaet: {
+    name:'Universität', cat:'edu', icon:'🏛️', cost:7500, upkeep:240,
+    size:[4,4], edu:2600, power:110, water:120, commerce:150, color:'#a06f2f',
+    desc:'Hochschule – starker Moralbonus und zusätzliche Wirtschaftskraft.'
+  },
+  bibliothek: {
+    name:'Bibliothek', cat:'edu', icon:'📚', cost:1200, upkeep:38,
+    size:[2,2], edu:300, leisure:120, power:16, water:12, color:'#8f6b3d',
+    desc:'Bildung und Freizeit in einem.'
+  },
+
+  /* ---------------- Gesundheit ---------------- */
+  arztpraxis: {
+    name:'Arztpraxis', cat:'health', icon:'🩺', cost:700, upkeep:28,
+    size:[1,1], health:260, power:9, water:8, color:'#d76a72',
+    desc:'Kleine Grundversorgung für 260 Einwohner.'
+  },
+  krankenhaus: {
+    name:'Krankenhaus', cat:'health', icon:'🏥', cost:4500, upkeep:190,
+    size:[3,3], health:2200, power:120, water:130, color:'#c8555f',
+    desc:'Große Klinik. Deckt bis zu 2200 Einwohner ab.'
+  },
+  apotheke: {
+    name:'Apotheke', cat:'health', icon:'💊', cost:450, upkeep:14,
+    size:[1,1], health:120, commerce:40, power:6, water:4, color:'#d98189',
+    desc:'Ergänzt die medizinische Versorgung und bringt etwas Gewerbesteuer.'
+  },
+
+  /* ---------------- Sicherheit ---------------- */
+  polizeiwache: {
+    name:'Polizeiwache', cat:'safety', icon:'🚓', cost:1600, upkeep:70,
+    size:[2,2], police:1400, power:28, water:22, color:'#3f5f9e',
+    desc:'Senkt die Kriminalität für bis zu 1400 Einwohner.'
+  },
+  feuerwehr: {
+    name:'Feuerwache', cat:'safety', icon:'🚒', cost:1700, upkeep:72,
+    size:[2,2], fire:1600, power:28, water:30, color:'#b04630',
+    desc:'Schützt vor Bränden. Ohne Feuerwehr sinkt die Moral spürbar.'
+  },
+  gefaengnis: {
+    name:'Gefängnis', cat:'safety', icon:'🔒', cost:4200, upkeep:180,
+    size:[3,3], jail:900, power:70, water:80, beauty:-60, color:'#5a5f6b',
+    desc:'Nimmt Straftäter auf. Hässlich – senkt die Attraktivität der Umgebung.'
+  },
+
+  /* ---------------- Freizeit ---------------- */
+  spielplatz: {
+    name:'Spielplatz', cat:'fun', icon:'🛝', cost:280, upkeep:8,
+    size:[2,2], leisure:150, beauty:40, water:6, color:'#5fae5a',
+    desc:'Günstige Freizeitfläche für Familien.'
+  },
+  schwimmbad_klein: {
+    name:'Schwimmbad (klein)', cat:'fun', icon:'🏊', cost:1300, upkeep:48,
+    size:[2,2], leisure:420, power:26, water:70, color:'#3f9ec4',
+    desc:'Kleines Freibad – beliebt und wasserintensiv.'
+  },
+  schwimmbad_gross: {
+    name:'Schwimmbad (groß)', cat:'fun', icon:'🤽', cost:3800, upkeep:135,
+    size:[4,3], leisure:1300, power:75, water:200, color:'#348bb0',
+    desc:'Großes Erlebnisbad mit hoher Freizeitwirkung.'
+  },
+  baggersee: {
+    name:'Baggersee', cat:'fun', icon:'🏖️', cost:900, upkeep:12,
+    size:[3,3], leisure:520, beauty:150, makesWater:true, needsRoad:false,
+    color:'#2c6ea8',
+    desc:'Ausgehobener See. Zählt als Gewässer für Pumpen und Wasserkraft.'
+  },
+  sportplatz: {
+    name:'Sportplatz', cat:'fun', icon:'⚽', cost:800, upkeep:24,
+    size:[3,2], leisure:380, power:12, water:30, color:'#4e9a4a',
+    desc:'Vereinssport für die Nachbarschaft.'
+  },
+  stadtpark: {
+    name:'Stadtpark', cat:'fun', icon:'🌳', cost:600, upkeep:16,
+    size:[3,3], leisure:300, beauty:260, water:20, color:'#3f7d3b',
+    desc:'Grüne Lunge – viel Schönheit, etwas Freizeit.'
+  },
+  kino: {
+    name:'Kino', cat:'fun', icon:'🎬', cost:1800, upkeep:55,
+    size:[2,2], leisure:600, commerce:220, power:40, water:14, color:'#7b4b93',
+    desc:'Unterhaltung mit Gewerbesteuer-Einnahmen.'
+  },
+
+  /* ---------------- ÖPNV ---------------- */
+  bushaltestelle: {
+    name:'Bushaltestelle', cat:'transit', icon:'🚏', cost:220, upkeep:14,
+    size:[1,1], transit:320, power:2, color:'#3f7f8f',
+    desc:'Günstiger Nahverkehr für 320 Einwohner.'
+  },
+  busdepot: {
+    name:'Busdepot', cat:'transit', icon:'🚌', cost:1400, upkeep:60,
+    size:[3,2], transit:1400, power:26, water:20, jobs:60, color:'#357487',
+    desc:'Erhöht die Reichweite des Busnetzes deutlich.'
+  },
+  tramhaltestelle: {
+    name:'Tramhaltestelle', cat:'transit', icon:'🚊', cost:700, upkeep:30,
+    size:[2,1], transit:900, power:14, color:'#2f8a9c',
+    desc:'Straßenbahn – leistungsfähiger als der Bus.'
+  },
+  bahnhof: {
+    name:'Bahnhof', cat:'transit', icon:'🚉', cost:4000, upkeep:170,
+    size:[4,3], transit:4200, power:90, water:60, commerce:300, jobs:120,
+    color:'#2b6b7d',
+    desc:'Zuganbindung. Sehr hohe ÖPNV-Kapazität und Wirtschaftsimpuls.'
+  },
+
+  /* ---------------- Gewerbe ---------------- */
+  supermarkt: {
+    name:'Supermarkt', cat:'shop', icon:'🛒', cost:1200, upkeep:38,
+    size:[3,2], commerce:520, jobs:60, power:44, water:26, color:'#3f8f6d',
+    desc:'Nahversorgung. Hebt die Moral und bringt Gewerbesteuer.'
+  },
+  kaufhaus: {
+    name:'Kaufhaus', cat:'shop', icon:'🏬', cost:4200, upkeep:150,
+    size:[4,3], commerce:1900, jobs:220, power:150, water:80, color:'#357f7f',
+    desc:'Großes Warenhaus – der stärkste Gewerbesteuerzahler.'
+  },
+  bank: {
+    name:'Bank', cat:'shop', icon:'🏦', cost:3000, upkeep:95,
+    size:[2,2], commerce:1100, jobs:120, power:70, water:26, color:'#5c7f9e',
+    desc:'Finanzsektor. Erhöht zusätzlich die Steuerzahlungsmoral leicht.'
+  },
+  buero: {
+    name:'Bürogebäude', cat:'shop', icon:'🏢', cost:2400, upkeep:80,
+    size:[2,2], commerce:900, jobs:180, power:80, water:34, color:'#4a6f8c',
+    desc:'Arbeitsplätze für gebildete Einwohner.'
+  },
+  markt: {
+    name:'Wochenmarkt', cat:'shop', icon:'🥕', cost:400, upkeep:12,
+    size:[2,2], commerce:190, jobs:24, leisure:80, water:8, color:'#8a9a3f',
+    desc:'Kleiner Markt – günstig, beliebt, ohne Stromanschluss.'
+  },
+
+  /* ---------------- Parken ---------------- */
+  parkplatz: {
+    name:'Parkplatz', cat:'park', icon:'🅿️', cost:120, upkeep:4,
+    size:[2,2], parking:160, beauty:-20, color:'#57585c',
+    desc:'Billige Stellfläche. Wenig schön, aber nötig.'
+  },
+  parkhaus: {
+    name:'Parkhaus', cat:'park', icon:'🚗', cost:1500, upkeep:45,
+    size:[2,2], parking:900, power:22, beauty:-30, commerce:80, color:'#65666b',
+    desc:'Viele Stellplätze auf kleiner Fläche.'
+  },
+
+  /* ---------------- Deko ---------------- */
+  brunnen: {
+    name:'Brunnen', cat:'deco', icon:'⛲', cost:180, upkeep:5,
+    size:[1,1], beauty:110, water:8, needsRoad:false, color:'#7fa8c4',
+    desc:'Klassische Stadtdekoration.'
+  },
+  statue: {
+    name:'Statue', cat:'deco', icon:'🗿', cost:320, upkeep:6,
+    size:[1,1], beauty:150, needsRoad:false, color:'#9a9a94',
+    desc:'Denkmal – rein dekorativ, aber wirkungsvoll.'
+  },
+  blumenbeet: {
+    name:'Blumenbeet', cat:'deco', icon:'🌷', cost:60, upkeep:2,
+    size:[1,1], beauty:55, water:3, needsRoad:false, color:'#b95f8f',
+    desc:'Kleine Verschönerung für jede Ecke.'
+  },
+  baumallee: {
+    name:'Baum', cat:'deco', icon:'🌲', cost:40, upkeep:1,
+    size:[1,1], beauty:45, needsRoad:false, drag:true, color:'#2f6b32',
+    desc:'Bäume pflanzen – zieh die Reihe einfach mit dem Finger.'
+  },
+  plaza: {
+    name:'Stadtplatz', cat:'deco', icon:'🟫', cost:220, upkeep:6,
+    size:[2,2], beauty:160, leisure:70, needsRoad:false, color:'#a08b6a',
+    desc:'Gepflasterter Platz zum Verweilen.'
+  },
+};
+
+/* Reihenfolge im Baumenü festhalten */
+const BUILD_ORDER = Object.keys(BUILDINGS);
+
+/* Hilfsfunktion: Gebäudedefinition inkl. Standardwerten holen */
+function def(type){
+  const b = BUILDINGS[type];
+  if(!b) return null;
+  return b;
+}
+function bVal(type, key){
+  const b = BUILDINGS[type];
+  return (b && b[key]) || 0;
+}
+function needsRoad(type){
+  const b = BUILDINGS[type];
+  if(!b) return false;
+  if(b.net) return false;                 // Straßen/Kabel selbst nicht
+  return b.needsRoad !== false;
+}
+
+</script>
+<script>
+/* ===== js/terrain.js ===== */
+/* ==========================================================
+   terrain.js – Kartengenerierung (Fluss, Seen, Wälder)
+   ========================================================== */
+
+/* Kleiner deterministischer Zufallsgenerator (Mulberry32) */
+function makeRng(seed){
+  let a = seed >>> 0;
+  return function(){
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* Geglättetes Wertrauschen auf einem Gitter */
+function valueNoise(w, h, scale, rng){
+  const gw = Math.ceil(w / scale) + 2;
+  const gh = Math.ceil(h / scale) + 2;
+  const g = new Float32Array(gw * gh);
+  for(let i = 0; i < g.length; i++) g[i] = rng();
+
+  const out = new Float32Array(w * h);
+  const smooth = t => t * t * (3 - 2 * t);
+
+  for(let y = 0; y < h; y++){
+    for(let x = 0; x < w; x++){
+      const fx = x / scale, fy = y / scale;
+      const x0 = Math.floor(fx), y0 = Math.floor(fy);
+      const tx = smooth(fx - x0), ty = smooth(fy - y0);
+      const v00 = g[y0 * gw + x0];
+      const v10 = g[y0 * gw + x0 + 1];
+      const v01 = g[(y0 + 1) * gw + x0];
+      const v11 = g[(y0 + 1) * gw + x0 + 1];
+      const a = v00 + (v10 - v00) * tx;
+      const b = v01 + (v11 - v01) * tx;
+      out[y * w + x] = a + (b - a) * ty;
+    }
+  }
+  return out;
+}
+
+/* Erzeugt das Terrain-Array der Karte */
+function generateTerrain(w, h, seed){
+  const rng = makeRng(seed);
+  const tiles = new Uint8Array(w * h).fill(T.GRASS);
+
+  const n1 = valueNoise(w, h, 9, rng);   // Wald
+  const n2 = valueNoise(w, h, 14, rng);  // Seen
+  const n3 = valueNoise(w, h, 5, rng);   // Feinstruktur
+
+  // --- Fluss: schlängelt sich von oben nach unten ---
+  let rx = w * (0.25 + rng() * 0.5);
+  let drift = (rng() - 0.5) * 0.6;
+  const riverW = 2 + Math.floor(rng() * 2);
+  for(let y = 0; y < h; y++){
+    drift += (rng() - 0.5) * 0.35;
+    drift = Math.max(-0.85, Math.min(0.85, drift));
+    rx += drift;
+    rx = Math.max(4, Math.min(w - 5, rx));
+    const half = riverW / 2 + Math.sin(y * 0.17) * 0.8;
+    for(let x = Math.floor(rx - half); x <= Math.ceil(rx + half); x++){
+      if(x >= 0 && x < w) tiles[y * w + x] = T.WATER;
+    }
+  }
+
+  // --- Seen aus dem Rauschen ---
+  for(let y = 0; y < h; y++){
+    for(let x = 0; x < w; x++){
+      const i = y * w + x;
+      if(tiles[i] === T.WATER) continue;
+      if(n2[i] > 0.78 && n3[i] > 0.4) tiles[i] = T.WATER;
+    }
+  }
+
+  // --- Ufersand ---
+  for(let y = 0; y < h; y++){
+    for(let x = 0; x < w; x++){
+      const i = y * w + x;
+      if(tiles[i] !== T.GRASS) continue;
+      let nearWater = false;
+      for(let dy = -1; dy <= 1 && !nearWater; dy++){
+        for(let dx = -1; dx <= 1; dx++){
+          const nx = x + dx, ny = y + dy;
+          if(nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+          if(tiles[ny * w + nx] === T.WATER){ nearWater = true; break; }
+        }
+      }
+      if(nearWater) tiles[i] = T.SAND;
+    }
+  }
+
+  // --- Wald & Felsen ---
+  for(let y = 0; y < h; y++){
+    for(let x = 0; x < w; x++){
+      const i = y * w + x;
+      if(tiles[i] !== T.GRASS) continue;
+      if(n1[i] > 0.68 && n3[i] > 0.35) tiles[i] = T.TREE;
+      else if(n1[i] < 0.13 && n2[i] < 0.3) tiles[i] = T.ROCK;
+    }
+  }
+
+  // --- Startfläche in der Mitte freiräumen ---
+  const cx = Math.floor(w / 2), cy = Math.floor(h / 2);
+  let best = null, bestScore = -1;
+  // Suche einen möglichst flachen 9x9-Bereich nahe der Mitte
+  for(let y = 6; y < h - 10; y += 2){
+    for(let x = 6; x < w - 10; x += 2){
+      let score = 0;
+      for(let dy = 0; dy < 9; dy++){
+        for(let dx = 0; dx < 9; dx++){
+          const t = tiles[(y + dy) * w + (x + dx)];
+          if(t === T.GRASS) score += 2;
+          else if(t === T.TREE) score += 1;
+          else if(t === T.WATER) score -= 4;
+        }
+      }
+      const dist = Math.abs(x + 4 - cx) + Math.abs(y + 4 - cy);
+      score -= dist * 0.6;
+      if(score > bestScore){ bestScore = score; best = [x, y]; }
+    }
+  }
+  if(best){
+    for(let dy = 0; dy < 9; dy++){
+      for(let dx = 0; dx < 9; dx++){
+        const i = (best[1] + dy) * w + (best[0] + dx);
+        if(tiles[i] === T.TREE || tiles[i] === T.ROCK) tiles[i] = T.GRASS;
+      }
+    }
+  }
+
+  return { tiles, start: best ? [best[0] + 4, best[1] + 4] : [cx, cy] };
+}
+
+</script>
+<script>
+/* ===== js/game.js ===== */
+/* ==========================================================
+   game.js – Spielzustand, Bauen, Versorgungsnetze, Simulation
+   ========================================================== */
+
+const Game = (() => {
+
+  const W = CONFIG.MAP_W, H = CONFIG.MAP_H, N = W * H;
+
+  /* Priorität bei Strom-/Wasserknappheit (höher = wird zuerst versorgt) */
+  const PRIORITY = {
+    water:100, power:98, health:90, safety:86, edu:80,
+    transit:70, shop:62, res:52, fun:40, park:32, deco:22, infra:10
+  };
+
+  const MONTH_NAMES = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+
+  /* ---------------------------------------------------------
+     Zustand
+     --------------------------------------------------------- */
+  const state = {
+    seed: 1,
+    tiles: null,        // Uint8Array – Terrain
+    occ: null,          // Int32Array – Index in buildings[] oder -1
+    buildings: [],      // Einträge können null sein (abgerissen)
+    money: CONFIG.START_MONEY,
+    day: 0,
+    taxRes: 10,
+    taxCom: 12,
+    pop: 0,
+    morale: 55,
+    speed: 1,
+    start: [0,0],
+    stats: emptyStats(),
+    history: { pop:[], morale:[], money:[] },
+    log: [],
+  };
+
+  function emptyStats(){
+    return {
+      pop:0, capacity:0, morale:55,
+      power:{supply:0, demand:0, used:0, stranded:0, total:0},
+      water:{supply:0, demand:0, used:0, stranded:0, total:0},
+      edu:0, health:0, police:0, fire:0, jail:0,
+      leisure:0, transit:0, parking:0, commerce:0,
+      beauty:0, pollution:0, jobs:0,
+      crime:0, employment:0,
+      unsupplied:0,
+      income:{res:0, com:0, total:0},
+      expense:{upkeep:0, power:0, water:0, total:0},
+      balance:0,
+      buildingCount:0,
+    };
+  }
+
+  /* ---------------------------------------------------------
+     Hilfsfunktionen
+     --------------------------------------------------------- */
+  const idx = (x,y) => y * W + x;
+  const inBounds = (x,y) => x >= 0 && y >= 0 && x < W && y < H;
+
+  function terrainAt(x,y){ return inBounds(x,y) ? state.tiles[idx(x,y)] : T.ROCK; }
+  function buildingAt(x,y){
+    if(!inBounds(x,y)) return null;
+    const i = state.occ[idx(x,y)];
+    return i >= 0 ? state.buildings[i] : null;
+  }
+  function isWaterTile(x,y){ return inBounds(x,y) && state.tiles[idx(x,y)] === T.WATER; }
+
+  function forEachTile(b, fn){
+    for(let y = b.y; y < b.y + b.h; y++)
+      for(let x = b.x; x < b.x + b.w; x++)
+        fn(x, y, idx(x,y));
+  }
+
+  /* Ist die Kachel Teil eines Straßen-Elements? */
+  function isRoadTile(x,y){
+    const b = buildingAt(x,y);
+    return !!(b && BUILDINGS[b.type].net === 'road');
+  }
+  /* Leitet die Kachel Strom? (Straße, Brücke oder Kabel) */
+  function isPowerTile(x,y){
+    const b = buildingAt(x,y);
+    if(!b) return false;
+    const d = BUILDINGS[b.type];
+    return d.net === 'road' || d.net === 'cable';
+  }
+
+  /* ---------------------------------------------------------
+     Neue Stadt
+     --------------------------------------------------------- */
+  function newGame(seed){
+    state.seed = seed || (Date.now() % 1000000);
+    const gen = generateTerrain(W, H, state.seed);
+    state.tiles = gen.tiles;
+    state.start = gen.start;
+    state.occ = new Int32Array(N).fill(-1);
+    state.buildings = [];
+    state.money = CONFIG.START_MONEY;
+    state.day = 0;
+    state.taxRes = 10;
+    state.taxCom = 12;
+    state.pop = 0;
+    state.morale = 55;
+    state.stats = emptyStats();
+    state.history = { pop:[], morale:[], money:[] };
+    state.log = [];
+
+    // Startstraße als Orientierung
+    const [sx, sy] = state.start;
+    for(let x = sx - 4; x <= sx + 4; x++) forcePlace('road', x, sy);
+    for(let y = sy - 4; y <= sy + 4; y++) forcePlace('road', sx, y);
+
+    updateSupply();
+    return state;
+  }
+
+  /* Platzieren ohne Kostenprüfung (für Startaufbau/Laden) */
+  function forcePlace(type, x, y){
+    const d = BUILDINGS[type];
+    if(!d) return false;
+    const [w,h] = d.size;
+    if(!fits(type, x, y, true)) return false;
+    return doPlace(type, x, y, w, h);
+  }
+
+  /* ---------------------------------------------------------
+     Platzierungsprüfung
+     --------------------------------------------------------- */
+  function fits(type, x, y, ignoreCost){
+    const d = BUILDINGS[type];
+    if(!d) return false;
+    const [w,h] = d.size;
+    if(x < 0 || y < 0 || x + w > W || y + h > H) return false;
+
+    for(let ty = y; ty < y + h; ty++){
+      for(let tx = x; tx < x + w; tx++){
+        const i = idx(tx,ty);
+        if(state.occ[i] !== -1) return false;
+        const t = state.tiles[i];
+        if(d.onWater){
+          if(t !== T.WATER) return false;      // Brücke nur auf Wasser
+        }else{
+          if(t === T.WATER) return false;      // sonst kein Bauen im Wasser
+        }
+      }
+    }
+
+    // Muss ans Wasser grenzen (Pumpe, Wasserkraft)
+    if(d.needsWater && !touchesWater(x, y, w, h)) return false;
+
+    if(!ignoreCost && state.money < priceOf(type, x, y)) return false;
+    return true;
+  }
+
+  function touchesWater(x, y, w, h){
+    for(let tx = x; tx < x + w; tx++){
+      if(isWaterTile(tx, y - 1) || isWaterTile(tx, y + h)) return true;
+    }
+    for(let ty = y; ty < y + h; ty++){
+      if(isWaterTile(x - 1, ty) || isWaterTile(x + w, ty)) return true;
+    }
+    return false;
+  }
+
+  /* Grundstückskosten inkl. Rodung von Wald/Fels */
+  function priceOf(type, x, y){
+    const d = BUILDINGS[type];
+    let cost = d.cost;
+    const [w,h] = d.size;
+    for(let ty = y; ty < y + h; ty++){
+      for(let tx = x; tx < x + w; tx++){
+        if(!inBounds(tx,ty)) continue;
+        const t = state.tiles[idx(tx,ty)];
+        if(t === T.TREE) cost += 6;
+        else if(t === T.ROCK) cost += 14;
+      }
+    }
+    return Math.round(cost);
+  }
+
+  /* Warum geht es nicht? (Text für den Spieler) */
+  function placementError(type, x, y){
+    const d = BUILDINGS[type];
+    if(!d) return 'Unbekanntes Gebäude';
+    const [w,h] = d.size;
+    if(x < 0 || y < 0 || x + w > W || y + h > H) return 'Außerhalb der Karte';
+
+    for(let ty = y; ty < y + h; ty++){
+      for(let tx = x; tx < x + w; tx++){
+        const i = idx(tx,ty);
+        if(state.occ[i] !== -1) return 'Platz ist schon belegt';
+        const t = state.tiles[i];
+        if(d.onWater && t !== T.WATER) return 'Brücken nur auf Wasser bauen';
+        if(!d.onWater && t === T.WATER) return 'Nicht im Wasser bauen – nimm eine Brücke';
+      }
+    }
+    if(d.needsWater && !touchesWater(x,y,w,h)) return `${d.name} muss ans Wasser grenzen`;
+    if(state.money < priceOf(type,x,y)) return 'Nicht genug Geld';
+    return 'Hier nicht möglich';
+  }
+
+  /* ---------------------------------------------------------
+     Bauen & Abreißen
+     --------------------------------------------------------- */
+  function doPlace(type, x, y, w, h){
+    const d = BUILDINGS[type];
+    const b = {
+      type, x, y, w, h,
+      built: state.day,
+      roadOK:false, powered:false, watered:false, active:false,
+      residents:0,
+      prevTerrain:null,
+    };
+
+    // Baggersee gräbt Wasser aus – Terrain merken für den Abriss
+    if(d.makesWater){
+      b.prevTerrain = [];
+      forEachTile(b, (tx,ty,i) => {
+        b.prevTerrain.push(state.tiles[i]);
+        state.tiles[i] = T.WATER;
+      });
+    }else{
+      // Bauplatz roden
+      forEachTile(b, (tx,ty,i) => {
+        if(state.tiles[i] === T.TREE || state.tiles[i] === T.ROCK) state.tiles[i] = T.GRASS;
+      });
+    }
+
+    const id = state.buildings.push(b) - 1;
+    b.id = id;
+    forEachTile(b, (tx,ty,i) => { state.occ[i] = id; });
+    return true;
+  }
+
+  function place(type, x, y){
+    if(!fits(type, x, y, false)){
+      return { ok:false, reason: placementError(type, x, y) };
+    }
+    const cost = priceOf(type, x, y);
+    const d = BUILDINGS[type];
+    state.money -= cost;
+    doPlace(type, x, y, d.size[0], d.size[1]);
+    updateSupply();
+    return { ok:true, cost };
+  }
+
+  /* Rücknahme einer gerade gesetzten Kachel (z. B. weil der Spieler
+     eigentlich zoomen wollte) – mit voller Kostenerstattung. */
+  function cancelPlace(x, y){
+    if(!inBounds(x,y)) return false;
+    const bi = state.occ[idx(x,y)];
+    if(bi < 0) return false;
+    const b = state.buildings[bi];
+    const d = BUILDINGS[b.type];
+    if(d.makesWater && b.prevTerrain){
+      let k = 0;
+      forEachTile(b, (tx,ty,ii) => { state.tiles[ii] = b.prevTerrain[k++]; });
+    }
+    forEachTile(b, (tx,ty,ii) => { state.occ[ii] = -1; });
+    state.buildings[bi] = null;
+    state.money += d.cost;
+    updateSupply();
+    return true;
+  }
+
+  function demolishAt(x, y){
+    if(!inBounds(x,y)) return { ok:false };
+    const i = idx(x,y);
+    const bi = state.occ[i];
+
+    if(bi < 0){
+      // Freie Kachel: Wald/Fels roden
+      const t = state.tiles[i];
+      if(t === T.TREE || t === T.ROCK){
+        const cost = t === T.TREE ? 6 : 14;
+        if(state.money < cost) return { ok:false, reason:'Nicht genug Geld' };
+        state.money -= cost;
+        state.tiles[i] = T.GRASS;
+        return { ok:true, cleared:true };
+      }
+      return { ok:false };
+    }
+
+    const b = state.buildings[bi];
+    const d = BUILDINGS[b.type];
+    const refund = Math.round(d.cost * CONFIG.DEMOLISH_REFUND);
+
+    if(d.makesWater && b.prevTerrain){
+      let k = 0;
+      forEachTile(b, (tx,ty,ii) => { state.tiles[ii] = b.prevTerrain[k++]; });
+    }
+    forEachTile(b, (tx,ty,ii) => { state.occ[ii] = -1; });
+    state.buildings[bi] = null;
+    state.money += refund;
+    updateSupply();
+    return { ok:true, refund, name:d.name };
+  }
+
+  /* ---------------------------------------------------------
+     Versorgungsnetze (Union-Find über belegte Kacheln)
+     --------------------------------------------------------- */
+  let ufP = null, ufW = null;
+
+  function makeUF(){
+    const p = new Int32Array(N);
+    for(let i = 0; i < N; i++) p[i] = -1;   // -1 = nicht im Netz
+    return p;
+  }
+  function find(p, i){
+    let r = i;
+    while(p[r] !== r) r = p[r];
+    while(p[i] !== r){ const nx = p[i]; p[i] = r; i = nx; }
+    return r;
+  }
+  function union(p, a, b){
+    const ra = find(p,a), rb = find(p,b);
+    if(ra !== rb) p[ra] = rb;
+  }
+
+  function buildNetworks(){
+    ufP = makeUF();
+    ufW = makeUF();
+
+    // Alle belegten Kacheln sind Knoten.
+    // Strom: Straßen, Brücken, Kabel und Gebäude leiten Strom weiter.
+    // Wasser: nur Straßen/Brücken (Rohre darunter) und Gebäude.
+    for(let i = 0; i < N; i++){
+      const bi = state.occ[i];
+      if(bi < 0) continue;
+      const d = BUILDINGS[state.buildings[bi].type];
+      ufP[i] = i;
+      if(d.net !== 'cable') ufW[i] = i;
+    }
+
+    for(let y = 0; y < H; y++){
+      for(let x = 0; x < W; x++){
+        const i = idx(x,y);
+        if(ufP[i] < 0 && ufW[i] < 0) continue;
+        if(x + 1 < W){
+          const j = i + 1;
+          if(ufP[i] >= 0 && ufP[j] >= 0) union(ufP, i, j);
+          if(ufW[i] >= 0 && ufW[j] >= 0) union(ufW, i, j);
+        }
+        if(y + 1 < H){
+          const j = i + W;
+          if(ufP[i] >= 0 && ufP[j] >= 0) union(ufP, i, j);
+          if(ufW[i] >= 0 && ufW[j] >= 0) union(ufW, i, j);
+        }
+      }
+    }
+  }
+
+  /* Straßenanschluss: mindestens eine angrenzende Straßenkachel */
+  function computeRoadOK(b){
+    const d = BUILDINGS[b.type];
+    if(d.net) return true;                 // Straßen/Kabel brauchen nichts
+    if(d.needsRoad === false) return true;
+    for(let tx = b.x; tx < b.x + b.w; tx++){
+      if(isRoadTile(tx, b.y - 1) || isRoadTile(tx, b.y + b.h)) return true;
+    }
+    for(let ty = b.y; ty < b.y + b.h; ty++){
+      if(isRoadTile(b.x - 1, ty) || isRoadTile(b.x + b.w, ty)) return true;
+    }
+    return false;
+  }
+
+  function rootOf(uf, b){
+    const i = idx(b.x, b.y);
+    return uf[i] >= 0 ? find(uf, i) : -1;
+  }
+
+  /* Verteilt eine Ressource innerhalb jeder Netzkomponente */
+  function allocate(uf, genKey, useKey, flagKey, producerOK){
+    const supply = new Map();
+    const consumers = new Map();
+    let totalSupply = 0, totalDemand = 0, totalUsed = 0;
+
+    for(const b of state.buildings){
+      if(!b) continue;
+      const d = BUILDINGS[b.type];
+      const root = rootOf(uf, b);
+
+      const gen = d[genKey] || 0;
+      if(gen > 0 && b.roadOK && producerOK(b, d) && root >= 0){
+        supply.set(root, (supply.get(root) || 0) + gen);
+        totalSupply += gen;
+      }
+
+      const use = d[useKey] || 0;
+      if(use > 0){
+        b[flagKey] = false;
+        if(b.roadOK && root >= 0){
+          totalDemand += use;   // nicht angeschlossene Gebäude verbrauchen nichts
+          if(!consumers.has(root)) consumers.set(root, []);
+          consumers.get(root).push(b);
+        }
+      }else{
+        b[flagKey] = true;   // kein Bedarf = immer versorgt
+      }
+    }
+
+    // Erzeugung in Netzabschnitten ohne Abnehmer ist nutzlos ("gestrandet").
+    // Sie darf nicht als verfügbare Leistung gemeldet werden, sonst sucht der
+    // Spieler den Fehler an der falschen Stelle.
+    let connected = 0, stranded = 0;
+    for(const [root, amount] of supply){
+      if(consumers.has(root)) connected += amount;
+      else stranded += amount;
+    }
+    for(const b of state.buildings){
+      if(!b) continue;
+      const d = BUILDINGS[b.type];
+      if(!(d[genKey] > 0)) continue;
+      const root = rootOf(uf, b);
+      b[flagKey === 'powered' ? 'powerIsolated' : 'waterIsolated'] =
+        b.roadOK && root >= 0 && !consumers.has(root);
+    }
+
+    for(const [root, list] of consumers){
+      let left = supply.get(root) || 0;
+      list.sort((a,b2) =>
+        (PRIORITY[BUILDINGS[b2.type].cat] || 0) - (PRIORITY[BUILDINGS[a.type].cat] || 0)
+      );
+      for(const b of list){
+        const use = BUILDINGS[b.type][useKey] || 0;
+        if(left >= use){ left -= use; b[flagKey] = true; totalUsed += use; }
+        else b[flagKey] = false;
+      }
+    }
+
+    return {
+      supply: connected, stranded,
+      total: totalSupply, demand: totalDemand, used: totalUsed
+    };
+  }
+
+  /* Vollständige Neuberechnung von Strom, Wasser und Anschluss */
+  function updateSupply(){
+    buildNetworks();
+
+    for(const b of state.buildings){
+      if(!b) continue;
+      b.roadOK = computeRoadOK(b);
+      b.powered = true;
+      b.watered = true;
+    }
+
+    let power = null, water = null;
+    // Zwei Durchläufe: Kraftwerke brauchen Wasser, Pumpen brauchen Strom
+    for(let pass = 0; pass < 2; pass++){
+      power = allocate(ufP, 'powerGen', 'power', 'powered',
+        (b, d) => !d.water || b.watered);
+      water = allocate(ufW, 'waterGen', 'water', 'watered',
+        (b, d) => !d.power || b.powered);
+    }
+
+    // Abgerechnet wird nur, was tatsächlich läuft. Ein Haus ohne Strom
+    // verbraucht auch kein Wasser und taucht nicht auf der Rechnung auf.
+    let powerBilled = 0, waterBilled = 0;
+    for(const b of state.buildings){
+      if(!b) continue;
+      b.active = b.roadOK && b.powered && b.watered;
+      if(b.active){
+        const d = BUILDINGS[b.type];
+        powerBilled += d.power || 0;
+        waterBilled += d.water || 0;
+      }
+    }
+    power.used = powerBilled;
+    water.used = waterBilled;
+
+    state.stats.power = power;
+    state.stats.water = water;
+  }
+
+  /* ---------------------------------------------------------
+     Kennzahlen der Stadt
+     --------------------------------------------------------- */
+  function collect(){
+    const s = state.stats;
+    s.capacity = 0; s.edu = 0; s.health = 0; s.police = 0; s.fire = 0;
+    s.jail = 0; s.leisure = 0; s.transit = 0; s.parking = 0;
+    s.commerce = 0; s.beauty = 0; s.pollution = 0; s.jobs = 0;
+    s.buildingCount = 0;
+    let upkeep = 0, blockedRes = 0, totalRes = 0;
+
+    for(const b of state.buildings){
+      if(!b) continue;
+      const d = BUILDINGS[b.type];
+      s.buildingCount++;
+      upkeep += d.upkeep || 0;
+      s.pollution += d.pollution || 0;
+
+      if(d.residents){
+        totalRes += d.residents;
+        if(b.active) s.capacity += d.residents * moraleOccupancy(d);
+        // Nur fehlende Versorgung zählt als Missstand – zu niedrige Moral
+        // für ein Hochhaus darf die Moral nicht zusätzlich drücken.
+        if(!b.active) blockedRes += d.residents;
+      }
+      if(!b.active) continue;
+
+      s.edu      += d.edu      || 0;
+      s.health   += d.health   || 0;
+      s.police   += d.police   || 0;
+      s.fire     += d.fire     || 0;
+      s.jail     += d.jail     || 0;
+      s.leisure  += d.leisure  || 0;
+      s.transit  += d.transit  || 0;
+      s.parking  += d.parking  || 0;
+      s.commerce += d.commerce || 0;
+      s.beauty   += d.beauty   || 0;
+      s.jobs     += d.jobs     || 0;
+    }
+
+    s.expense.upkeep = upkeep;
+    s.unsupplied = totalRes > 0 ? blockedRes / totalRes : 0;
+    return s;
+  }
+
+  const cov = (have, need) => need <= 0 ? 1 : Math.min(1, have / need);
+
+  /* Verdichtete Bauten füllen sich erst bei guter Stimmung – gleitend,
+     damit die Stadt bei knapper Moral nicht schlagartig kippt. */
+  function moraleOccupancy(d){
+    if(!d.minMorale) return 1;
+    const lo = d.minMorale - 20;
+    return Math.max(0, Math.min(1, (state.morale - lo) / 20));
+  }
+
+  function computeMoraleTarget(){
+    const s = state.stats;
+    const pop = Math.max(1, state.pop);
+
+    const cEdu     = cov(s.edu,     pop * 0.30);
+    const cHealth  = cov(s.health,  pop);
+    const cPolice  = cov(s.police,  pop);
+    const cFire    = cov(s.fire,    pop);
+    const cLeisure = cov(s.leisure, pop * 0.40);
+    const cTransit = cov(s.transit, pop * 0.55);
+    const cShop    = cov(s.commerce,pop * 0.55);
+    const cPark    = cov(s.parking, pop * 0.30);
+
+    let m = 42;
+    m += 12 * cEdu;
+    m += 10 * cHealth;
+    m +=  5 * cPolice;
+    m +=  5 * cFire;
+    m += 11 * cLeisure;
+    m +=  6 * cTransit;
+    m +=  7 * cShop;
+    m +=  4 * cPark;
+
+    // Schönheit der Stadt
+    m += Math.min(6, s.beauty / Math.max(120, pop * 0.9));
+
+    // Steuern: 10 % gelten als "normal".
+    // Über 10 % wächst der Unmut überproportional – irgendwann kippt die Stadt.
+    const t = state.taxRes;
+    m -= t > 10 ? Math.pow(t - 10, 1.45) * 0.75 : (t - 10) * 0.5;
+    m -= Math.max(0, state.taxCom - 14) * 0.4;
+
+    // Kriminalität
+    m -= Math.min(22, s.crime * 0.16);
+
+    // Umweltverschmutzung
+    m -= Math.min(14, s.pollution / Math.max(6, pop / 90));
+
+    // Nicht versorgte Wohnhäuser
+    m -= s.unsupplied * 30;
+
+    // Arbeitsplätze (35 % pendeln aus der Stadt heraus)
+    const workforce = pop * 0.5;
+    const employment = cov(s.jobs + pop * 0.35, workforce);
+    s.employment = employment;
+    m += 9 * employment - 5;
+
+    // Leere Stadtkasse
+    if(state.money < 0) m -= 12;
+
+    return Math.max(0, Math.min(100, m));
+  }
+
+  function computeCrime(){
+    const s = state.stats;
+    const pop = state.pop;
+    if(pop < 1){ s.crime = 0; return; }
+    // Grundkriminalität pro 1000 Einwohner
+    let crime = 26 * (1 + (55 - state.morale) / 70);
+    crime *= 1 - 0.72 * cov(s.police, pop);
+    crime *= 1 - 0.22 * cov(s.jail, pop * 0.03);
+    crime *= 1 - 0.10 * cov(s.edu, pop * 0.30);
+    s.crime = Math.max(0, crime);
+  }
+
+  function computeFinance(){
+    const s = state.stats;
+    // Steuerzahlungsmoral: unzufriedene Bürger zahlen deutlich unwilliger
+    const willingness = 0.30 + Math.pow(state.morale / 100, 1.2) * 0.85;
+    const bankBonus = 1 + Math.min(0.09, countActive('bank') * 0.03);
+
+    s.income.res = state.pop * CONFIG.INCOME_PER_CITIZEN * (state.taxRes / 100)
+                   * willingness * bankBonus;
+    s.income.com = s.commerce * CONFIG.REVENUE_PER_COMMERCE * (state.taxCom / 100)
+                   * (0.6 + state.morale / 200) * bankBonus;
+    s.income.total = s.income.res + s.income.com;
+
+    s.expense.power = s.power.used * CONFIG.PRICE_POWER;
+    s.expense.water = s.water.used * CONFIG.PRICE_WATER;
+    s.expense.total = s.expense.upkeep + s.expense.power + s.expense.water;
+
+    s.balance = s.income.total - s.expense.total;
+  }
+
+  function countActive(type){
+    let n = 0;
+    for(const b of state.buildings) if(b && b.type === type && b.active) n++;
+    return n;
+  }
+
+  /* ---------------------------------------------------------
+     Ein Spieltag
+     --------------------------------------------------------- */
+  const events = [];
+  function emit(text, kind){ events.push({ text, kind: kind || 'info' }); }
+  function drainEvents(){ const e = events.slice(); events.length = 0; return e; }
+
+  function tickDay(){
+    state.day++;
+
+    collect();
+    computeCrime();
+
+    const target = computeMoraleTarget();
+    state.morale += (target - state.morale) * 0.09;
+    state.morale = Math.max(0, Math.min(100, state.morale));
+    state.stats.morale = state.morale;
+
+    // Zuzug / Wegzug
+    const attract = Math.min(1, 0.12 + (state.morale / 100) * 1.05);
+    const popTarget = state.stats.capacity * attract;
+    const delta = (popTarget - state.pop) * (popTarget > state.pop ? 0.055 : 0.09);
+    state.pop = Math.max(0, state.pop + delta);
+    state.stats.pop = Math.floor(state.pop);
+
+    computeFinance();
+    state.money += state.stats.balance / CONFIG.DAYS_PER_MONTH;
+
+    distributeResidents();
+    checkAlerts();
+
+    if(state.day % 5 === 0){
+      state.history.pop.push(Math.floor(state.pop));
+      state.history.morale.push(Math.round(state.morale));
+      state.history.money.push(Math.round(state.money));
+      const cap = 240;
+      for(const k of ['pop','morale','money'])
+        if(state.history[k].length > cap) state.history[k].shift();
+    }
+  }
+
+  /* Einwohner auf die Wohnhäuser verteilen (nur für die Anzeige) */
+  function distributeResidents(){
+    const cap = state.stats.capacity;
+    const ratio = cap > 0 ? Math.min(1, state.pop / cap) : 0;
+    for(const b of state.buildings){
+      if(!b) continue;
+      const d = BUILDINGS[b.type];
+      if(!d.residents) continue;
+      b.residents = b.active
+        ? Math.round(d.residents * moraleOccupancy(d) * ratio)
+        : 0;
+    }
+  }
+
+  /* Warnmeldungen */
+  const alertState = { power:false, water:false, money:false, road:false,
+                       morale:false, jail:false, stranded:false };
+
+  function checkAlerts(){
+    const s = state.stats;
+
+    const stranded = s.power.stranded + s.water.stranded;
+    if(stranded > 0 && !alertState.stranded){
+      emit('🔌 Ein Kraftwerk/Wasserwerk hängt an keinem Netz – mit Stromkabel oder Straße verbinden.', 'warn');
+      alertState.stranded = true;
+    } else if(stranded === 0) alertState.stranded = false;
+
+    const powerShort = s.power.demand > s.power.supply + 0.001;
+    if(powerShort && !alertState.power){
+      emit('⚡ Stromausfall! Der Bedarf übersteigt die Erzeugung.', 'bad');
+      alertState.power = true;
+    } else if(!powerShort) alertState.power = false;
+
+    const waterShort = s.water.demand > s.water.supply + 0.001;
+    if(waterShort && !alertState.water){
+      emit('💧 Wassermangel! Baue Pumpen oder einen Wasserturm.', 'bad');
+      alertState.water = true;
+    } else if(!waterShort) alertState.water = false;
+
+    if(state.money < 0 && !alertState.money){
+      emit('💸 Die Stadtkasse ist im Minus!', 'bad');
+      alertState.money = true;
+    } else if(state.money >= 0) alertState.money = false;
+
+    let unconnected = 0;
+    for(const b of state.buildings) if(b && !b.roadOK) unconnected++;
+    if(unconnected > 0 && !alertState.road){
+      emit(`🛣️ ${unconnected} Gebäude ohne Straßenanschluss.`, 'warn');
+      alertState.road = true;
+    } else if(unconnected === 0) alertState.road = false;
+
+    if(state.morale < 30 && !alertState.morale){
+      emit('😠 Die Einwohner sind unzufrieden – sie ziehen weg.', 'warn');
+      alertState.morale = true;
+    } else if(state.morale > 40) alertState.morale = false;
+
+    if(s.crime > 45 && !alertState.jail){
+      emit('🚨 Hohe Kriminalität! Mehr Polizei nötig.', 'warn');
+      alertState.jail = true;
+    } else if(s.crime < 30) alertState.jail = false;
+  }
+
+  /* ---------------------------------------------------------
+     Datum
+     --------------------------------------------------------- */
+  function dateLabel(){
+    const months = Math.floor(state.day / CONFIG.DAYS_PER_MONTH);
+    const y = Math.floor(months / 12) + 1;
+    const m = months % 12;
+    return `${MONTH_NAMES[m]} ${String(y).padStart(4,'0')}`;
+  }
+
+  /* ---------------------------------------------------------
+     Speichern / Laden
+     --------------------------------------------------------- */
+  const SAVE_KEY = 'stadtbauer.save.v1';
+
+  function save(){
+    const data = {
+      v: 1,
+      seed: state.seed,
+      tiles: Array.from(state.tiles),
+      buildings: state.buildings.filter(Boolean).map(b => ({
+        t: b.type, x: b.x, y: b.y, pt: b.prevTerrain
+      })),
+      money: state.money,
+      day: state.day,
+      taxRes: state.taxRes,
+      taxCom: state.taxCom,
+      pop: state.pop,
+      morale: state.morale,
+      start: state.start,
+    };
+    try{
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+      return true;
+    }catch(e){
+      return false;
+    }
+  }
+
+  function hasSave(){
+    try{ return !!localStorage.getItem(SAVE_KEY); }catch(e){ return false; }
+  }
+
+  function load(){
+    let data;
+    try{ data = JSON.parse(localStorage.getItem(SAVE_KEY)); }catch(e){ return false; }
+    if(!data || !data.tiles) return false;
+
+    state.seed = data.seed;
+    state.tiles = Uint8Array.from(data.tiles);
+    state.occ = new Int32Array(N).fill(-1);
+    state.buildings = [];
+    state.start = data.start || [Math.floor(W/2), Math.floor(H/2)];
+
+    for(const sb of data.buildings){
+      const d = BUILDINGS[sb.t];
+      if(!d) continue;
+      // Terrain steht bereits richtig in der Datei – direkt eintragen
+      const b = {
+        type: sb.t, x: sb.x, y: sb.y, w: d.size[0], h: d.size[1],
+        built: 0, roadOK:false, powered:false, watered:false, active:false,
+        residents:0, prevTerrain: sb.pt || null,
+      };
+      const id = state.buildings.push(b) - 1;
+      b.id = id;
+      forEachTile(b, (tx,ty,i) => { state.occ[i] = id; });
+    }
+
+    state.money = data.money;
+    state.day = data.day;
+    state.taxRes = data.taxRes;
+    state.taxCom = data.taxCom;
+    state.pop = data.pop;
+    state.morale = data.morale;
+    state.stats = emptyStats();
+    state.history = { pop:[], morale:[], money:[] };
+
+    updateSupply();
+    collect();
+    computeCrime();
+    computeFinance();
+    return true;
+  }
+
+  /* ---------------------------------------------------------
+     Öffentliche Schnittstelle
+     --------------------------------------------------------- */
+  return {
+    state, W, H,
+    idx, inBounds, terrainAt, buildingAt, isWaterTile, isRoadTile, isPowerTile,
+    forEachTile,
+    newGame, place, fits, priceOf, placementError, demolishAt, cancelPlace,
+    updateSupply, tickDay, dateLabel,
+    collect, countActive,
+    drainEvents, emit,
+    save, load, hasSave,
+  };
+})();
+
+</script>
+<script>
+/* ===== js/render.js ===== */
+/* ==========================================================
+   render.js – Zeichnen von Karte, Gebäuden und Vorschau
+   ========================================================== */
+
+const Render = (() => {
+
+  let canvas, ctx, dpr = 1;
+  let vw = 0, vh = 0;                 // CSS-Pixel des Sichtbereichs
+
+  const cam = { x:0, y:0, zoom:1 };   // x/y = Weltkoordinate in der Bildmitte
+
+  const opts = { grid:true, overlay:false };
+
+  let shade = null;                   // kleine Farbvariation je Kachel
+  let ghost = null;                   // { type, x, y, ok } Bauvorschau
+  let selected = null;                // markiertes Gebäude
+
+  /* ---------------------------------------------------------
+     Initialisierung
+     --------------------------------------------------------- */
+  function init(cv){
+    canvas = cv;
+    ctx = canvas.getContext('2d');
+    resize();
+    window.addEventListener('resize', resize);
+    buildShade();
+    centerOn(Game.state.start[0], Game.state.start[1]);
+  }
+
+  function buildShade(){
+    const n = Game.W * Game.H;
+    shade = new Float32Array(n);
+    for(let i = 0; i < n; i++){
+      const h = Math.sin(i * 12.9898) * 43758.5453;
+      shade[i] = (h - Math.floor(h)) * 0.16 - 0.08;
+    }
+  }
+
+  function resize(){
+    dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    const r = canvas.parentElement.getBoundingClientRect();
+    vw = r.width; vh = r.height;
+    canvas.width  = Math.round(vw * dpr);
+    canvas.height = Math.round(vh * dpr);
+    canvas.style.width = vw + 'px';
+    canvas.style.height = vh + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    clampCam();
+  }
+
+  /* ---------------------------------------------------------
+     Kamera
+     --------------------------------------------------------- */
+  function tileSize(){ return CONFIG.TILE * cam.zoom; }
+
+  function centerOn(tx, ty){
+    const ts = tileSize();
+    cam.x = tx * ts;
+    cam.y = ty * ts;
+    clampCam();
+  }
+
+  function clampCam(){
+    const ts = tileSize();
+    const worldW = Game.W * ts, worldH = Game.H * ts;
+    const marginX = Math.min(vw * 0.4, worldW);
+    const marginY = Math.min(vh * 0.4, worldH);
+    cam.x = Math.max(-marginX, Math.min(worldW + marginX, cam.x));
+    cam.y = Math.max(-marginY, Math.min(worldH + marginY, cam.y));
+  }
+
+  function screenToTile(sx, sy){
+    const ts = tileSize();
+    const wx = cam.x + (sx - vw / 2);
+    const wy = cam.y + (sy - vh / 2);
+    return [Math.floor(wx / ts), Math.floor(wy / ts)];
+  }
+
+  function tileToScreen(tx, ty){
+    const ts = tileSize();
+    return [tx * ts - cam.x + vw / 2, ty * ts - cam.y + vh / 2];
+  }
+
+  function pan(dx, dy){ cam.x -= dx; cam.y -= dy; clampCam(); }
+
+  function zoomAt(sx, sy, factor){
+    const before = screenToTileF(sx, sy);
+    cam.zoom = Math.max(CONFIG.MIN_ZOOM, Math.min(CONFIG.MAX_ZOOM, cam.zoom * factor));
+    const after = screenToTileF(sx, sy);
+    const ts = tileSize();
+    cam.x += (before[0] - after[0]) * ts;
+    cam.y += (before[1] - after[1]) * ts;
+    clampCam();
+  }
+
+  function screenToTileF(sx, sy){
+    const ts = tileSize();
+    return [(cam.x + (sx - vw / 2)) / ts, (cam.y + (sy - vh / 2)) / ts];
+  }
+
+  /* ---------------------------------------------------------
+     Farbhilfen
+     --------------------------------------------------------- */
+  function shadeColor(hex, amt){
+    const n = parseInt(hex.slice(1), 16);
+    let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    r = Math.max(0, Math.min(255, Math.round(r * (1 + amt))));
+    g = Math.max(0, Math.min(255, Math.round(g * (1 + amt))));
+    b = Math.max(0, Math.min(255, Math.round(b * (1 + amt))));
+    return `rgb(${r},${g},${b})`;
+  }
+
+  function roundRect(x, y, w, h, r){
+    const rr = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
+  }
+
+  /* ---------------------------------------------------------
+     Hauptzeichnung
+     --------------------------------------------------------- */
+  function draw(){
+    const st = Game.state;
+    const ts = tileSize();
+
+    ctx.fillStyle = '#131a15';
+    ctx.fillRect(0, 0, vw, vh);
+
+    // Sichtbarer Kachelbereich
+    const x0 = Math.max(0, Math.floor((cam.x - vw / 2) / ts));
+    const y0 = Math.max(0, Math.floor((cam.y - vh / 2) / ts));
+    const x1 = Math.min(Game.W - 1, Math.ceil((cam.x + vw / 2) / ts));
+    const y1 = Math.min(Game.H - 1, Math.ceil((cam.y + vh / 2) / ts));
+
+    const ox = -cam.x + vw / 2;
+    const oy = -cam.y + vh / 2;
+
+    /* --- Terrain --- */
+    for(let ty = y0; ty <= y1; ty++){
+      for(let tx = x0; tx <= x1; tx++){
+        const i = ty * Game.W + tx;
+        const t = st.tiles[i];
+        ctx.fillStyle = shadeColor(TERRAIN_COLORS[t], shade[i]);
+        ctx.fillRect(Math.floor(tx * ts + ox), Math.floor(ty * ts + oy),
+                     Math.ceil(ts) + 1, Math.ceil(ts) + 1);
+      }
+    }
+
+    /* --- Bäume/Felsen als kleine Symbole --- */
+    if(ts > 13){
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = `${Math.round(ts * 0.62)}px system-ui, sans-serif`;
+      for(let ty = y0; ty <= y1; ty++){
+        for(let tx = x0; tx <= x1; tx++){
+          const i = ty * Game.W + tx;
+          const t = st.tiles[i];
+          if(t !== T.TREE && t !== T.ROCK) continue;
+          if(st.occ[i] !== -1) continue;
+          ctx.globalAlpha = 0.9;
+          ctx.fillText(t === T.TREE ? '🌲' : '🪨',
+                       tx * ts + ox + ts / 2, ty * ts + oy + ts / 2 + 1);
+          ctx.globalAlpha = 1;
+        }
+      }
+    }
+
+    /* --- Raster --- */
+    if(opts.grid && ts > 11){
+      ctx.strokeStyle = 'rgba(0,0,0,.13)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for(let tx = x0; tx <= x1 + 1; tx++){
+        const px = Math.floor(tx * ts + ox) + 0.5;
+        ctx.moveTo(px, y0 * ts + oy); ctx.lineTo(px, (y1 + 1) * ts + oy);
+      }
+      for(let ty = y0; ty <= y1 + 1; ty++){
+        const py = Math.floor(ty * ts + oy) + 0.5;
+        ctx.moveTo(x0 * ts + ox, py); ctx.lineTo((x1 + 1) * ts + ox, py);
+      }
+      ctx.stroke();
+    }
+
+    /* --- Gebäude --- */
+    drawBuildings(x0, y0, x1, y1, ts, ox, oy);
+
+    /* --- Bauvorschau --- */
+    if(ghost) drawGhost(ts, ox, oy);
+
+    /* --- Auswahlrahmen --- */
+    if(selected && Game.state.buildings[selected.id] === selected){
+      const [sx, sy] = [selected.x * ts + ox, selected.y * ts + oy];
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 4]);
+      ctx.strokeRect(sx + 1, sy + 1, selected.w * ts - 2, selected.h * ts - 2);
+      ctx.setLineDash([]);
+    }
+  }
+
+  function drawBuildings(x0, y0, x1, y1, ts, ox, oy){
+    const list = Game.state.buildings;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    for(let k = 0; k < list.length; k++){
+      const b = list[k];
+      if(!b) continue;
+      if(b.x > x1 || b.y > y1 || b.x + b.w <= x0 || b.y + b.h <= y0) continue;
+
+      const d = BUILDINGS[b.type];
+      const px = b.x * ts + ox, py = b.y * ts + oy;
+      const pw = b.w * ts, ph = b.h * ts;
+
+      if(d.net === 'road'){ drawRoad(b, px, py, ts); continue; }
+      if(d.net === 'cable'){ drawCable(b, px, py, ts); continue; }
+
+      // Gebäudekörper – leicht eingerückt, damit der Untergrund durchscheint
+      const pad = Math.max(1, ts * 0.09);
+      const bx = px + pad, by = py + pad;
+      const bw = pw - pad * 2, bh = ph - pad * 2;
+      const rad = Math.max(2, ts * 0.14);
+
+      ctx.fillStyle = 'rgba(0,0,0,.28)';
+      roundRect(bx + pad * 0.5, by + pad * 0.7, bw, bh, rad);
+      ctx.fill();
+
+      ctx.fillStyle = d.color || '#8a8a8a';
+      roundRect(bx, by, bw, bh, rad);
+      ctx.fill();
+
+      // Dachkante als Lichtkante
+      ctx.fillStyle = 'rgba(255,255,255,.13)';
+      roundRect(bx, by, bw, Math.max(1.5, bh * 0.22), rad);
+      ctx.fill();
+
+      // Symbol
+      if(ts > 11){
+        const fs = Math.min(bw, bh) * 0.6;
+        ctx.font = `${Math.round(fs)}px system-ui, "Apple Color Emoji", sans-serif`;
+        ctx.fillText(d.icon, px + pw / 2, py + ph / 2);
+      }
+
+      // Versorgungs-Ansicht
+      if(opts.overlay){
+        let tint = null;
+        if(b.powerIsolated || b.waterIsolated) tint = 'rgba(255,140,40,.5)';
+        else if(!b.roadOK) tint = 'rgba(255,70,70,.45)';
+        else if(!b.powered) tint = 'rgba(255,210,60,.45)';
+        else if(!b.watered) tint = 'rgba(70,150,255,.45)';
+        if(tint){
+          ctx.fillStyle = tint;
+          roundRect(bx, by, bw, bh, rad);
+          ctx.fill();
+        }
+      }
+
+      // Statuszeichen
+      const isolated = b.powerIsolated || b.waterIsolated;
+      if((!b.active || isolated) && ts > 12){
+        const badge = isolated ? '🔌' : !b.roadOK ? '🚫' : (!b.powered ? '⚡' : '💧');
+        const bs = Math.max(9, Math.min(16, ts * 0.4));
+        ctx.font = `${Math.round(bs)}px system-ui, "Apple Color Emoji", sans-serif`;
+        ctx.fillStyle = 'rgba(0,0,0,.6)';
+        ctx.beginPath();
+        ctx.arc(px + pw - bs * 0.45, py + bs * 0.45, bs * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.fillText(badge, px + pw - bs * 0.45, py + bs * 0.5);
+      }
+    }
+  }
+
+  /* Straße mit Anschlüssen an die Nachbarn */
+  function drawRoad(b, px, py, ts){
+    const d = BUILDINGS[b.type];
+    ctx.fillStyle = d.color;
+    ctx.fillRect(px, py, ts + 0.5, ts + 0.5);
+
+    if(ts < 10) return;
+    const cx = px + ts / 2, cy = py + ts / 2;
+    const n = Game.isRoadTile(b.x, b.y - 1);
+    const s = Game.isRoadTile(b.x, b.y + 1);
+    const w = Game.isRoadTile(b.x - 1, b.y);
+    const e = Game.isRoadTile(b.x + 1, b.y);
+
+    ctx.strokeStyle = 'rgba(235,235,235,.55)';
+    ctx.lineWidth = Math.max(1, ts * 0.055);
+    ctx.setLineDash([ts * 0.18, ts * 0.14]);
+    ctx.beginPath();
+    if(n || s){ ctx.moveTo(cx, py); ctx.lineTo(cx, py + ts); }
+    if(w || e){ ctx.moveTo(px, cy); ctx.lineTo(px + ts, cy); }
+    if(!n && !s && !w && !e){ ctx.moveTo(px + ts * 0.3, cy); ctx.lineTo(px + ts * 0.7, cy); }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Randmarkierung
+    ctx.strokeStyle = 'rgba(0,0,0,.25)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(px + 0.5, py + 0.5, ts - 1, ts - 1);
+  }
+
+  /* Stromkabel: Masten mit Leitung */
+  function drawCable(b, px, py, ts){
+    ctx.fillStyle = 'rgba(60,70,60,.35)';
+    ctx.fillRect(px, py, ts + 0.5, ts + 0.5);
+    if(ts < 8) return;
+
+    const cx = px + ts / 2, cy = py + ts / 2;
+    ctx.strokeStyle = '#d8c98a';
+    ctx.lineWidth = Math.max(1.2, ts * 0.09);
+    ctx.beginPath();
+    let any = false;
+    const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
+    for(const [dx,dy] of dirs){
+      if(Game.isPowerTile(b.x + dx, b.y + dy)){
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + dx * ts / 2, cy + dy * ts / 2);
+        any = true;
+      }
+    }
+    if(!any){ ctx.moveTo(cx - ts * 0.2, cy); ctx.lineTo(cx + ts * 0.2, cy); }
+    ctx.stroke();
+
+    ctx.fillStyle = '#6d5f3a';
+    const r = Math.max(1.5, ts * 0.14);
+    ctx.fillRect(cx - r / 2, cy - r, r, r * 2);
+  }
+
+  /* Bauvorschau */
+  function drawGhost(ts, ox, oy){
+    const d = BUILDINGS[ghost.type];
+    if(!d) return;
+    const [w,h] = d.size;
+    const px = ghost.x * ts + ox, py = ghost.y * ts + oy;
+
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = d.color || '#999';
+    roundRect(px + 1, py + 1, w * ts - 2, h * ts - 2, Math.max(2, ts * 0.16));
+    ctx.fill();
+    if(ts > 11 && d.icon){
+      ctx.globalAlpha = 0.85;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = `${Math.round(Math.min(w,h) * ts * 0.5)}px system-ui, "Apple Color Emoji", sans-serif`;
+      ctx.fillText(d.icon, px + w * ts / 2, py + h * ts / 2);
+    }
+    ctx.globalAlpha = 1;
+
+    ctx.strokeStyle = ghost.ok ? '#5dff9a' : '#ff5d5d';
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(px + 1, py + 1, w * ts - 2, h * ts - 2);
+  }
+
+  /* ---------------------------------------------------------
+     Öffentliche Schnittstelle
+     --------------------------------------------------------- */
+  return {
+    init, draw, resize,
+    cam, opts,
+    tileSize, screenToTile, tileToScreen, pan, zoomAt, centerOn,
+    setGhost: g => { ghost = g; },
+    getGhost: () => ghost,
+    setSelected: s => { selected = s; },
+    getSelected: () => selected,
+    rebuildShade: buildShade,
+  };
+})();
+
+</script>
+<script>
+/* ===== js/input.js ===== */
+/* ==========================================================
+   input.js – Touch-, Maus- und Gestensteuerung
+   ========================================================== */
+
+const Input = (() => {
+
+  let canvas;
+  const pointers = new Map();
+
+  let mode = 'none';        // 'none' | 'build' | 'bulldoze'
+  let tool = null;          // Gebäudetyp im Baumodus
+
+  let dragging = false;     // Karte wird geschoben
+  let painting = false;     // Straße/Kabel wird gezogen
+  let lastPaint = null;
+  let strokeTiles = [];     // in diesem Zug gesetzte Kacheln
+  let multiTouch = false;   // seit dem Aufsetzen war mehr als ein Finger im Spiel
+  let moved = 0;
+  let downTime = 0;
+  let pinchDist = 0;
+  let pinchMid = null;
+
+  const TAP_SLOP = 9;       // Pixel, bis eine Berührung als Ziehen gilt
+
+  /* Rückrufe, die die UI setzt */
+  const cb = { onTap:null, onPlaced:null, onFail:null, onDemolish:null };
+
+  function init(cv){
+    canvas = cv;
+    canvas.addEventListener('pointerdown', onDown, { passive:false });
+    canvas.addEventListener('pointermove', onMove, { passive:false });
+    canvas.addEventListener('pointerup', onUp, { passive:false });
+    canvas.addEventListener('pointercancel', onUp, { passive:false });
+    canvas.addEventListener('pointerleave', onUp, { passive:false });
+    canvas.addEventListener('wheel', onWheel, { passive:false });
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
+  }
+
+  function localPos(e){
+    const r = canvas.getBoundingClientRect();
+    return [e.clientX - r.left, e.clientY - r.top];
+  }
+
+  /* Anker: bei mehrfeldrigen Gebäuden liegt der Finger in der Mitte */
+  function anchor(type, tx, ty){
+    const d = BUILDINGS[type];
+    if(!d) return [tx, ty];
+    return [tx - Math.floor((d.size[0] - 1) / 2), ty - Math.floor((d.size[1] - 1) / 2)];
+  }
+
+  function isDragTool(){
+    return mode === 'build' && tool && BUILDINGS[tool] && BUILDINGS[tool].drag;
+  }
+
+  /* ---------------------------------------------------------
+     Pointer-Ereignisse
+     --------------------------------------------------------- */
+  function onDown(e){
+    e.preventDefault();
+    canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
+    const [x,y] = localPos(e);
+    pointers.set(e.pointerId, { x, y, sx:x, sy:y });
+
+    if(pointers.size === 2){
+      // Zwei Finger: Zoomen/Schieben. Was der erste Finger eben gesetzt hat,
+      // war nicht gewollt – rückgängig machen.
+      if(painting && strokeTiles.length <= 2 && performance.now() - downTime < 300){
+        for(const [tx,ty] of strokeTiles) Game.cancelPlace(tx, ty);
+      }
+      strokeTiles = [];
+      multiTouch = true;
+      dragging = false; painting = false;
+      const p = [...pointers.values()];
+      pinchDist = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
+      pinchMid = [(p[0].x + p[1].x) / 2, (p[0].y + p[1].y) / 2];
+      return;
+    }
+    if(pointers.size > 2) return;
+
+    moved = 0;
+    downTime = performance.now();
+
+    if(isDragTool()){
+      painting = true;
+      lastPaint = null;
+      strokeTiles = [];
+      paintAt(x, y);
+    }else{
+      dragging = true;
+    }
+    updateGhost(x, y);
+  }
+
+  function onMove(e){
+    const p = pointers.get(e.pointerId);
+    if(!p) {
+      if(mode === 'build' && pointers.size === 0){
+        const [mx,my] = localPos(e);
+        updateGhost(mx, my);         // Maus-Vorschau am Desktop
+      }
+      return;
+    }
+    e.preventDefault();
+    const [x,y] = localPos(e);
+    const dx = x - p.x, dy = y - p.y;
+    p.x = x; p.y = y;
+    moved += Math.hypot(dx, dy);
+
+    if(pointers.size === 2){
+      const q = [...pointers.values()];
+      const dist = Math.hypot(q[0].x - q[1].x, q[0].y - q[1].y);
+      const mid = [(q[0].x + q[1].x) / 2, (q[0].y + q[1].y) / 2];
+      if(pinchDist > 0){
+        Render.zoomAt(mid[0], mid[1], dist / pinchDist);
+      }
+      if(pinchMid){
+        Render.pan(mid[0] - pinchMid[0], mid[1] - pinchMid[1]);
+      }
+      pinchDist = dist; pinchMid = mid;
+      return;
+    }
+
+    if(painting){
+      paintAt(x, y);
+      updateGhost(x, y);
+    }else if(dragging && moved > TAP_SLOP){
+      Render.pan(dx, dy);
+      updateGhost(x, y);
+    }else{
+      updateGhost(x, y);
+    }
+  }
+
+  function onUp(e){
+    const p = pointers.get(e.pointerId);
+    if(!p) return;
+    pointers.delete(e.pointerId);
+
+    if(pointers.size >= 1){
+      // Der verbleibende Finger startet keine neue Aktion
+      pinchDist = 0; pinchMid = null;
+      dragging = false; painting = false;
+      return;
+    }
+
+    const wasTap = moved <= TAP_SLOP && (performance.now() - downTime) < 700;
+    const wasPainting = painting;
+    dragging = false; painting = false;
+    pinchDist = 0; pinchMid = null;
+
+    if(wasTap && !wasPainting && !multiTouch){
+      handleTap(p.x, p.y);
+    }
+    multiTouch = false;
+    strokeTiles = [];
+    lastPaint = null;
+  }
+
+  function onWheel(e){
+    e.preventDefault();
+    const [x,y] = localPos(e);
+    Render.zoomAt(x, y, e.deltaY < 0 ? 1.12 : 1 / 1.12);
+    updateGhost(x, y);
+  }
+
+  /* ---------------------------------------------------------
+     Aktionen
+     --------------------------------------------------------- */
+  function handleTap(sx, sy){
+    const [tx, ty] = Render.screenToTile(sx, sy);
+    if(!Game.inBounds(tx, ty)) return;
+
+    if(mode === 'build' && tool){
+      const [ax, ay] = anchor(tool, tx, ty);
+      const res = Game.place(tool, ax, ay);
+      if(res.ok) cb.onPlaced && cb.onPlaced(tool, res.cost);
+      else cb.onFail && cb.onFail(res.reason);
+      updateGhost(sx, sy);
+      return;
+    }
+
+    if(mode === 'bulldoze'){
+      const res = Game.demolishAt(tx, ty);
+      if(res.ok) cb.onDemolish && cb.onDemolish(res);
+      else if(res.reason) cb.onFail && cb.onFail(res.reason);
+      return;
+    }
+
+    // Ansichtsmodus: Gebäude auswählen
+    const b = Game.buildingAt(tx, ty);
+    Render.setSelected(b || null);
+    cb.onTap && cb.onTap(b, tx, ty);
+  }
+
+  /* Straßen/Kabel/Bäume beim Ziehen setzen (mit Linieninterpolation) */
+  function paintAt(sx, sy){
+    const [tx, ty] = Render.screenToTile(sx, sy);
+    if(!Game.inBounds(tx, ty)) return;
+
+    if(lastPaint && (lastPaint[0] !== tx || lastPaint[1] !== ty)){
+      lineTiles(lastPaint[0], lastPaint[1], tx, ty, (x, y) => tryPaint(x, y));
+    }else if(!lastPaint){
+      tryPaint(tx, ty);
+    }
+    lastPaint = [tx, ty];
+  }
+
+  function tryPaint(tx, ty){
+    const [ax, ay] = anchor(tool, tx, ty);
+    const res = Game.place(tool, ax, ay);
+    if(res.ok){
+      strokeTiles.push([ax, ay]);
+      cb.onPlaced && cb.onPlaced(tool, res.cost, true);
+    }else if(res.reason === 'Nicht genug Geld'){
+      cb.onFail && cb.onFail(res.reason);
+    }
+  }
+
+  /* Bresenham über Kacheln */
+  function lineTiles(x0, y0, x1, y1, fn){
+    let dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0);
+    let sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+    let err = dx + dy;
+    let guard = 0;
+    for(;;){
+      fn(x0, y0);
+      if((x0 === x1 && y0 === y1) || ++guard > 400) break;
+      const e2 = 2 * err;
+      if(e2 >= dy){ err += dy; x0 += sx; }
+      if(e2 <= dx){ err += dx; y0 += sy; }
+    }
+  }
+
+  /* ---------------------------------------------------------
+     Bauvorschau
+     --------------------------------------------------------- */
+  function updateGhost(sx, sy){
+    if(mode !== 'build' || !tool){ Render.setGhost(null); return; }
+    const [tx, ty] = Render.screenToTile(sx, sy);
+    const [ax, ay] = anchor(tool, tx, ty);
+    Render.setGhost({ type: tool, x: ax, y: ay, ok: Game.fits(tool, ax, ay, false) });
+  }
+
+  /* ---------------------------------------------------------
+     Modus
+     --------------------------------------------------------- */
+  function setMode(m, t){
+    mode = m;
+    tool = t || null;
+    if(m !== 'build') Render.setGhost(null);
+    if(m !== 'none') Render.setSelected(null);
+  }
+  function getMode(){ return { mode, tool }; }
+
+  return { init, setMode, getMode, cb };
+})();
+
+</script>
+<script>
+/* ===== js/ui.js ===== */
+/* ==========================================================
+   ui.js – HUD, Baumenü, Steuern, Statistik, Dialoge
+   ========================================================== */
+
+const UI = (() => {
+
+  const $  = s => document.querySelector(s);
+  const $$ = s => Array.from(document.querySelectorAll(s));
+
+  let activeCat = 'infra';
+  let openPanel = null;
+
+  /* ---------------------------------------------------------
+     Formatierung
+     --------------------------------------------------------- */
+  const nf = new Intl.NumberFormat('de-DE');
+  const fmt = n => nf.format(Math.round(n));
+  function money(n){
+    const a = Math.abs(n);
+    if(a >= 1e6) return (n / 1e6).toFixed(2).replace('.', ',') + ' Mio €';
+    if(a >= 1e4) return fmt(n) + ' €';
+    return fmt(n) + ' €';
+  }
+  const pct = n => Math.round(n * 100) + '%';
+
+  /* ---------------------------------------------------------
+     Initialisierung
+     --------------------------------------------------------- */
+  function init(){
+    buildCategoryTabs();
+    buildGrid();
+    wireNav();
+    wireTax();
+    wireMenu();
+    wireDialog();
+    wireInputCallbacks();
+    updateHUD();
+  }
+
+  /* ---------------- Navigation & Sheets ---------------- */
+  function wireNav(){
+    $$('#bottombar .nav-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if(btn.dataset.tool === 'bulldoze'){
+          const cur = Input.getMode();
+          if(cur.mode === 'bulldoze') setTool(null);
+          else setBulldoze();
+          return;
+        }
+        togglePanel(btn.dataset.panel);
+      });
+    });
+
+    $$('.sheet-close').forEach(b => b.addEventListener('click', () => closePanel()));
+    $('#scrim').addEventListener('click', () => closePanel());
+
+    $('#toolCancel').addEventListener('click', () => setTool(null));
+
+    $$('#speedCtl .spd').forEach(b => {
+      b.addEventListener('click', () => {
+        Game.state.speed = parseInt(b.dataset.speed, 10);
+        $$('#speedCtl .spd').forEach(x => x.classList.toggle('active', x === b));
+      });
+    });
+  }
+
+  function togglePanel(name){
+    if(openPanel === name){ closePanel(); return; }
+    closePanel();
+    const el = $('#panel-' + name);
+    if(!el) return;
+    el.classList.add('open');
+    $('#scrim').classList.add('on');
+    openPanel = name;
+    $$('#bottombar .nav-btn').forEach(b => b.classList.toggle('active', b.dataset.panel === name));
+    if(name === 'stats') renderStats();
+    if(name === 'tax')  renderBudget();
+    if(name === 'build') buildGrid();
+  }
+
+  function closePanel(){
+    $$('.sheet').forEach(s => s.classList.remove('open'));
+    $('#scrim').classList.remove('on');
+    openPanel = null;
+    $$('#bottombar .nav-btn').forEach(b => {
+      if(b.dataset.panel) b.classList.remove('active');
+    });
+  }
+
+  /* ---------------- Baumenü ---------------- */
+  function buildCategoryTabs(){
+    const box = $('#catTabs');
+    box.innerHTML = '';
+    CATEGORIES.forEach(c => {
+      const el = document.createElement('button');
+      el.className = 'cat' + (c.id === activeCat ? ' active' : '');
+      el.innerHTML = `<span>${c.icon}</span>${c.name}`;
+      el.addEventListener('click', () => {
+        activeCat = c.id;
+        $$('#catTabs .cat').forEach(x => x.classList.remove('active'));
+        el.classList.add('active');
+        buildGrid();
+      });
+      box.appendChild(el);
+    });
+  }
+
+  function buildGrid(){
+    const box = $('#buildGrid');
+    box.innerHTML = '';
+    const money0 = Game.state.money;
+
+    BUILD_ORDER.filter(k => BUILDINGS[k].cat === activeCat).forEach(key => {
+      const d = BUILDINGS[key];
+      const card = document.createElement('button');
+      const afford = money0 >= d.cost;
+      card.className = 'bcard' + (afford ? '' : ' disabled');
+
+      const bits = [];
+      if(d.size[0] > 1 || d.size[1] > 1) bits.push(`${d.size[0]}×${d.size[1]}`);
+      if(d.residents) bits.push(`👪${d.residents}`);
+      if(d.powerGen)  bits.push(`⚡+${d.powerGen}`);
+      else if(d.power) bits.push(`⚡${d.power}`);
+      if(d.waterGen)  bits.push(`💧+${d.waterGen}`);
+      else if(d.water) bits.push(`💧${d.water}`);
+
+      card.innerHTML =
+        `<span class="bi">${d.icon}</span>` +
+        `<span class="bn">${d.name}</span>` +
+        `<span class="bc">${fmt(d.cost)} €</span>` +
+        `<span class="bs">${bits.join(' · ')}</span>`;
+
+      card.addEventListener('click', () => {
+        setTool(key);
+        closePanel();
+      });
+      box.appendChild(card);
+    });
+  }
+
+  /* ---------------- Werkzeug ---------------- */
+  function setTool(type){
+    if(!type){
+      Input.setMode('none');
+      $('#toolbar').classList.add('hidden');
+      $$('#bottombar .nav-btn').forEach(b => { if(b.dataset.tool) b.classList.remove('active'); });
+      hideHint();
+      return;
+    }
+    const d = BUILDINGS[type];
+    Input.setMode('build', type);
+    $('#toolbar').classList.remove('hidden');
+    $('#toolIcon').textContent = d.icon;
+    $('#toolName').textContent = d.name;
+
+    const meta = [`${fmt(d.cost)} €`];
+    if(d.upkeep) meta.push(`${fmt(d.upkeep)} €/Mon`);
+    if(d.powerGen) meta.push(`⚡+${d.powerGen}`); else if(d.power) meta.push(`⚡${d.power}`);
+    if(d.waterGen) meta.push(`💧+${d.waterGen}`); else if(d.water) meta.push(`💧${d.water}`);
+    if(d.needsWater) meta.push('ans Wasser bauen');
+    $('#toolMeta').textContent = meta.join(' · ');
+
+    $$('#bottombar .nav-btn').forEach(b => { if(b.dataset.tool) b.classList.remove('active'); });
+    showHint(d.drag ? 'Ziehen zum Bauen · 2 Finger = Karte bewegen' : 'Antippen zum Bauen');
+  }
+
+  function setBulldoze(){
+    Input.setMode('bulldoze');
+    $('#toolbar').classList.remove('hidden');
+    $('#toolIcon').textContent = '🚜';
+    $('#toolName').textContent = 'Abrissbirne';
+    $('#toolMeta').textContent = `Erstattung ${Math.round(CONFIG.DEMOLISH_REFUND * 100)} % der Baukosten`;
+    $$('#bottombar .nav-btn').forEach(b => b.classList.toggle('active', b.dataset.tool === 'bulldoze'));
+    closePanel();
+    showHint('Gebäude antippen zum Abreißen');
+  }
+
+  /* ---------------- Hinweisblase ---------------- */
+  let hintTimer = null;
+  function showHint(text){
+    const el = $('#hintBubble');
+    el.textContent = text;
+    el.classList.remove('hidden');
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(() => el.classList.add('hidden'), 2600);
+  }
+  function hideHint(){ $('#hintBubble').classList.add('hidden'); }
+
+  /* ---------------- Meldungen ---------------- */
+  function toast(text, kind){
+    const box = $('#ticker');
+    const el = document.createElement('div');
+    el.className = 'msg ' + (kind || '');
+    el.textContent = text;
+    box.appendChild(el);
+    while(box.children.length > 4) box.removeChild(box.firstChild);
+    setTimeout(() => {
+      el.style.transition = 'opacity .4s';
+      el.style.opacity = '0';
+      setTimeout(() => el.remove(), 420);
+    }, 3600);
+  }
+
+  /* ---------------- Eingabe-Rückrufe ---------------- */
+  let lastFail = 0;
+  function wireInputCallbacks(){
+    Input.cb.onPlaced = () => { updateHUD(); };
+    Input.cb.onFail = reason => {
+      const now = performance.now();
+      if(now - lastFail < 1200) return;
+      lastFail = now;
+      toast('⚠️ ' + reason, 'warn');
+    };
+    Input.cb.onDemolish = res => {
+      if(res.name) toast(`🚜 ${res.name} abgerissen (+${fmt(res.refund)} €)`, 'info');
+      updateHUD();
+    };
+    Input.cb.onTap = b => { if(b) showInfo(b); else closeInfo(); };
+  }
+
+  /* ---------------- Kopfleiste ---------------- */
+  function updateHUD(){
+    const st = Game.state, s = st.stats;
+
+    const mEl = $('#statMoney');
+    mEl.querySelector('.val').textContent = money(st.money);
+    mEl.classList.toggle('broke', st.money < 0);
+
+    $('#statPop').querySelector('.val').textContent = fmt(st.pop);
+
+    const mo = Math.round(st.morale);
+    const moV = $('#statMorale').querySelector('.val');
+    moV.textContent = mo + '%';
+    moV.className = 'val' + (mo < 30 ? ' bad' : mo < 50 ? ' warn' : '');
+    $('#statMorale').querySelector('.ic').textContent =
+      mo >= 70 ? '😀' : mo >= 50 ? '🙂' : mo >= 30 ? '😐' : '😠';
+
+    // Anzeige immer "verfügbar/benötigt" – wie in der Stadtübersicht
+    const pV = $('#statPower').querySelector('.val');
+    pV.textContent = `${fmt(s.power.supply)}/${fmt(s.power.demand)}`;
+    pV.className = 'val' + (s.power.demand > s.power.supply ? ' bad' : '');
+
+    const wV = $('#statWater').querySelector('.val');
+    wV.textContent = `${fmt(s.water.supply)}/${fmt(s.water.demand)}`;
+    wV.className = 'val' + (s.water.demand > s.water.supply ? ' bad' : '');
+
+    $('#dateLabel').textContent = Game.dateLabel();
+    const bal = $('#balanceLabel');
+    const b = s.balance;
+    bal.textContent = (b >= 0 ? '+' : '') + money(b) + '/Mon';
+    bal.className = b >= 0 ? 'pos' : 'neg';
+
+    if(openPanel === 'tax') renderBudget();
+    if(openPanel === 'stats') renderStats();
+  }
+
+  /* ---------------- Steuern ---------------- */
+  function wireTax(){
+    const r = $('#taxRes'), c = $('#taxCom');
+    r.value = Game.state.taxRes;
+    c.value = Game.state.taxCom;
+
+    const upd = () => {
+      Game.state.taxRes = parseInt(r.value, 10);
+      Game.state.taxCom = parseInt(c.value, 10);
+      $('#taxResVal').textContent = r.value + '%';
+      $('#taxComVal').textContent = c.value + '%';
+      $('#taxResHint').textContent = taxHint(parseInt(r.value, 10));
+      $('#taxComHint').textContent = comHint(parseInt(c.value, 10));
+      renderBudget();
+    };
+    r.addEventListener('input', upd);
+    c.addEventListener('input', upd);
+    upd();
+  }
+
+  function taxHint(t){
+    if(t === 0) return 'Keine Steuern – die Einwohner lieben dich, die Kasse leidet.';
+    if(t <= 7)  return 'Niedrig – zieht viele Neubürger an.';
+    if(t <= 12) return 'Normal – wird von den Einwohnern akzeptiert.';
+    if(t <= 20) return 'Hoch – die Moral sinkt spürbar.';
+    if(t <= 30) return 'Sehr hoch – Einwohner ziehen weg und zahlen unwilliger.';
+    return 'Wucher! Die Stadt wird sich leeren.';
+  }
+  function comHint(t){
+    if(t <= 8)  return 'Unternehmensfreundlich, aber wenig Einnahmen.';
+    if(t <= 16) return 'Ausgewogen.';
+    if(t <= 25) return 'Hoch – belastet die Stimmung leicht.';
+    return 'Sehr hoch – Gewerbe wird unattraktiv.';
+  }
+
+  function renderBudget(){
+    const s = Game.state.stats;
+    const row = (label, val, cls) =>
+      `<tr><td>${label}</td><td class="${cls}">${val >= 0 ? '+' : ''}${money(val)}</td></tr>`;
+
+    $('#budgetTable').innerHTML =
+      row('Wohnsteuer', s.income.res, 'g') +
+      row('Gewerbesteuer', s.income.com, 'g') +
+      row('Unterhalt', -s.expense.upkeep, 'r') +
+      row('Stromkosten', -s.expense.power, 'r') +
+      row('Wasserkosten', -s.expense.water, 'r') +
+      `<tr class="total"><td>Monatsbilanz</td><td class="${s.balance >= 0 ? 'g' : 'r'}">` +
+      `${s.balance >= 0 ? '+' : ''}${money(s.balance)}</td></tr>`;
+  }
+
+  /* ---------------- Statistik ---------------- */
+  function bar(label, have, need, unit){
+    const ratio = need <= 0 ? 1 : Math.min(1, have / need);
+    const good = unit === 'pct' ? 0.7 : 0.9;
+    const cls = ratio >= good ? 'ok' : ratio >= 0.5 ? 'warn' : 'bad';
+    const txt = unit === 'pct'
+      ? pct(ratio)
+      : `${fmt(have)} / ${fmt(need)}`;
+    return `<div class="bar ${cls}"><i style="width:${(ratio * 100).toFixed(1)}%"></i>` +
+           `<span><b>${label}</b><b>${txt}</b></span></div>`;
+  }
+
+  function renderStats(){
+    const st = Game.state, s = st.stats;
+    const pop = Math.max(1, st.pop);
+
+    let html = '';
+
+    html += '<div class="stat-block"><h5>Bevölkerung</h5>';
+    html += `<div class="kv"><span>Einwohner</span><b>${fmt(st.pop)}</b></div>`;
+    html += `<div class="kv"><span>Wohnplätze</span><b>${fmt(s.capacity)}</b></div>`;
+    html += `<div class="kv"><span>Auslastung</span><b>${s.capacity ? pct(st.pop / s.capacity) : '–'}</b></div>`;
+    html += `<div class="kv"><span>Gebäude</span><b>${fmt(s.buildingCount)}</b></div>`;
+    html += '</div>';
+
+    html += '<div class="stat-block"><h5>Stimmung</h5>';
+    html += bar('Moral', st.morale, 100, 'pct');
+    html += `<div class="kv"><span>Kriminalität</span><b>${s.crime.toFixed(1)} / 1000 Einw.</b></div>`;
+    html += `<div class="kv"><span>Beschäftigung</span><b>${pct(s.employment)}</b></div>`;
+    html += `<div class="kv"><span>Verschmutzung</span><b>${fmt(s.pollution)}</b></div>`;
+    html += `<div class="kv"><span>Schönheit</span><b>${fmt(s.beauty)}</b></div>`;
+    html += '</div>';
+
+    html += '<div class="stat-block"><h5>Versorgung</h5>';
+    html += bar('⚡ Strom', s.power.supply, s.power.demand);
+    html += bar('💧 Wasser', s.water.supply, s.water.demand);
+    if(s.power.stranded > 0)
+      html += `<div class="kv"><span>⚡ nicht angeschlossen</span><b class="r">${fmt(s.power.stranded)}</b></div>`;
+    if(s.water.stranded > 0)
+      html += `<div class="kv"><span>💧 nicht angeschlossen</span><b class="r">${fmt(s.water.stranded)}</b></div>`;
+    html += '</div>';
+
+    html += '<div class="stat-block"><h5>Dienstleistungen</h5>';
+    html += bar('🎓 Bildung', s.edu, pop * 0.30);
+    html += bar('🏥 Gesundheit', s.health, pop);
+    html += bar('🚓 Polizei', s.police, pop);
+    html += bar('🚒 Feuerwehr', s.fire, pop);
+    html += bar('🎡 Freizeit', s.leisure, pop * 0.40);
+    html += bar('🚌 ÖPNV', s.transit, pop * 0.55);
+    html += bar('🛒 Gewerbe', s.commerce, pop * 0.55);
+    html += bar('🅿️ Parkplätze', s.parking, pop * 0.30);
+    html += bar('🔒 Haftplätze', s.jail, pop * 0.03);
+    html += '</div>';
+
+    html += '<div class="stat-block"><h5>Haushalt</h5>';
+    html += `<div class="kv"><span>Einnahmen</span><b class="g">+${money(s.income.total)}</b></div>`;
+    html += `<div class="kv"><span>Ausgaben</span><b class="r">-${money(s.expense.total)}</b></div>`;
+    html += `<div class="kv"><span>Bilanz</span><b class="${s.balance >= 0 ? 'g' : 'r'}">${money(s.balance)}</b></div>`;
+    html += '</div>';
+
+    $('#statsBody').innerHTML = html;
+  }
+
+  /* ---------------- Gebäude-Info ---------------- */
+  let infoBuilding = null;
+
+  function wireDialog(){
+    $('#infoClose').addEventListener('click', closeInfo);
+    $('#infoDemolish').addEventListener('click', () => {
+      if(!infoBuilding) return;
+      const res = Game.demolishAt(infoBuilding.x, infoBuilding.y);
+      if(res.ok) toast(`🚜 ${res.name} abgerissen (+${fmt(res.refund)} €)`, 'info');
+      Render.setSelected(null);
+      closeInfo();
+      updateHUD();
+    });
+  }
+
+  function showInfo(b){
+    const d = BUILDINGS[b.type];
+    infoBuilding = b;
+    $('#infoTitle').textContent = `${d.icon} ${d.name}`;
+
+    const rows = [];
+    if(d.desc) rows.push(`<p style="color:#93a0b8;margin:0 0 10px">${d.desc}</p>`);
+
+    const status = b.active
+      ? '<b class="g">In Betrieb</b>'
+      : !b.roadOK ? '<b class="r">Kein Straßenanschluss</b>'
+      : !b.powered ? '<b class="r">Kein Strom</b>'
+      : '<b class="r">Kein Wasser</b>';
+    rows.push(`<div class="kv"><span>Status</span>${status}</div>`);
+
+    if(d.residents) rows.push(`<div class="kv"><span>Bewohner</span><b>${fmt(b.residents)} / ${fmt(d.residents)}</b></div>`);
+    if(d.minMorale) rows.push(`<div class="kv"><span>Benötigte Moral</span><b>${d.minMorale}%</b></div>`);
+    if(d.powerGen) rows.push(`<div class="kv"><span>Stromerzeugung</span><b class="g">+${d.powerGen}</b></div>`);
+    if(d.power)    rows.push(`<div class="kv"><span>Stromverbrauch</span><b>${d.power}</b></div>`);
+    if(d.waterGen) rows.push(`<div class="kv"><span>Wassererzeugung</span><b class="g">+${d.waterGen}</b></div>`);
+    if(d.water)    rows.push(`<div class="kv"><span>Wasserverbrauch</span><b>${d.water}</b></div>`);
+    if(d.edu)      rows.push(`<div class="kv"><span>Schulplätze</span><b>${fmt(d.edu)}</b></div>`);
+    if(d.health)   rows.push(`<div class="kv"><span>Behandlungsplätze</span><b>${fmt(d.health)}</b></div>`);
+    if(d.police)   rows.push(`<div class="kv"><span>Polizei-Abdeckung</span><b>${fmt(d.police)}</b></div>`);
+    if(d.fire)     rows.push(`<div class="kv"><span>Brandschutz</span><b>${fmt(d.fire)}</b></div>`);
+    if(d.jail)     rows.push(`<div class="kv"><span>Haftplätze</span><b>${fmt(d.jail)}</b></div>`);
+    if(d.leisure)  rows.push(`<div class="kv"><span>Freizeitwert</span><b>${fmt(d.leisure)}</b></div>`);
+    if(d.transit)  rows.push(`<div class="kv"><span>ÖPNV-Kapazität</span><b>${fmt(d.transit)}</b></div>`);
+    if(d.parking)  rows.push(`<div class="kv"><span>Stellplätze</span><b>${fmt(d.parking)}</b></div>`);
+    if(d.commerce) rows.push(`<div class="kv"><span>Gewerbeleistung</span><b>${fmt(d.commerce)}</b></div>`);
+    if(d.jobs)     rows.push(`<div class="kv"><span>Arbeitsplätze</span><b>${fmt(d.jobs)}</b></div>`);
+    if(d.beauty)   rows.push(`<div class="kv"><span>Schönheit</span><b class="${d.beauty > 0 ? 'g' : 'r'}">${d.beauty}</b></div>`);
+    if(d.pollution)rows.push(`<div class="kv"><span>Verschmutzung</span><b class="r">${d.pollution}</b></div>`);
+    if(d.upkeep)   rows.push(`<div class="kv"><span>Unterhalt</span><b class="r">${money(d.upkeep)}/Mon</b></div>`);
+
+    $('#infoBody').innerHTML = rows.join('');
+    $('#infoDialog').classList.remove('hidden');
+  }
+
+  function closeInfo(){
+    infoBuilding = null;
+    $('#infoDialog').classList.add('hidden');
+    Render.setSelected(null);
+  }
+
+  /* ---------------- Menü ---------------- */
+  function wireMenu(){
+    $('#btnSave').addEventListener('click', () => {
+      const ok = Game.save();
+      toast(ok ? '💾 Stadt gespeichert.' : '⚠️ Speichern fehlgeschlagen.', ok ? 'good' : 'bad');
+    });
+
+    $('#btnLoad').addEventListener('click', () => {
+      if(!Game.hasSave()){ toast('Kein Spielstand gefunden.', 'warn'); return; }
+      if(Game.load()){
+        Render.rebuildShade();
+        Render.centerOn(Game.state.start[0], Game.state.start[1]);
+        syncControls();
+        updateHUD();
+        closePanel();
+        toast('📂 Spielstand geladen.', 'good');
+      }else toast('⚠️ Laden fehlgeschlagen.', 'bad');
+    });
+
+    $('#btnNew').addEventListener('click', () => {
+      if(!confirm('Neue Stadt starten? Der aktuelle Fortschritt geht verloren (außer du hast gespeichert).')) return;
+      Game.newGame();
+      Render.rebuildShade();
+      Render.centerOn(Game.state.start[0], Game.state.start[1]);
+      setTool(null);
+      syncControls();
+      updateHUD();
+      closePanel();
+      toast('🌱 Neue Stadt gegründet. Viel Erfolg!', 'good');
+    });
+
+    $('#optGrid').addEventListener('change', e => { Render.opts.grid = e.target.checked; });
+    $('#optOverlay').addEventListener('change', e => { Render.opts.overlay = e.target.checked; });
+  }
+
+  function syncControls(){
+    $('#taxRes').value = Game.state.taxRes;
+    $('#taxCom').value = Game.state.taxCom;
+    $('#taxResVal').textContent = Game.state.taxRes + '%';
+    $('#taxComVal').textContent = Game.state.taxCom + '%';
+  }
+
+  return { init, updateHUD, toast, showHint, setTool, syncControls, closeInfo };
+})();
+
+</script>
+<script>
+/* ===== js/main.js ===== */
+/* ==========================================================
+   main.js – Start und Hauptschleife
+   ========================================================== */
+
+(function(){
+
+  let last = 0;
+  let acc = 0;          // aufgelaufene Realzeit für Spieltage
+  let hudAcc = 0;
+  let autosaveDay = 0;
+
+  function boot(){
+    // Spielstand laden, sonst neue Stadt
+    if(Game.hasSave()){
+      Game.newGame();          // Terrain-Grundgerüst anlegen
+      if(!Game.load()) Game.newGame();
+    }else{
+      Game.newGame();
+    }
+
+    const canvas = document.getElementById('game');
+    Render.init(canvas);
+    Input.init(canvas);
+    UI.init();
+    UI.syncControls();
+    Game.collect();
+    Game.updateSupply();
+    UI.updateHUD();
+
+    if(!Game.hasSave()){
+      UI.toast('🏙️ Willkommen! Baue Straßen, Häuser und ein Kraftwerk.', 'good');
+      setTimeout(() => UI.toast('💡 Tipp: Jedes Gebäude braucht eine angrenzende Straße.', 'info'), 2600);
+    }
+
+    // Verhindert versehentliches Scrollen/Zoomen der Seite auf Mobilgeräten
+    document.addEventListener('touchmove', e => {
+      if(e.target.closest('.sheet-body, .build-grid, .cat-tabs')) return;
+      e.preventDefault();
+    }, { passive:false });
+    document.addEventListener('gesturestart', e => e.preventDefault());
+    document.addEventListener('dblclick', e => e.preventDefault(), { passive:false });
+
+    requestAnimationFrame(loop);
+  }
+
+  function loop(now){
+    if(!last) last = now;
+    let dt = now - last;
+    last = now;
+    if(dt > 250) dt = 250;         // nach Pausen nicht aufholen
+
+    const speed = Game.state.speed;
+    if(speed > 0){
+      acc += dt * speed;
+      const step = CONFIG.DAY_MS;
+      let guard = 0;
+      while(acc >= step && guard++ < 12){
+        acc -= step;
+        Game.tickDay();
+      }
+      for(const ev of Game.drainEvents()) UI.toast(ev.text, ev.kind);
+    }
+
+    hudAcc += dt;
+    if(hudAcc > 220){
+      hudAcc = 0;
+      UI.updateHUD();
+    }
+
+    // Alle drei Spieljahre automatisch sichern
+    if(Game.state.day - autosaveDay >= CONFIG.DAYS_PER_MONTH * 36){
+      autosaveDay = Game.state.day;
+      Game.save();
+    }
+
+    Render.draw();
+    requestAnimationFrame(loop);
+  }
+
+  if(document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+
+})();
+
+</script>
+</body>
+</html>
