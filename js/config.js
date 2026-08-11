@@ -5,9 +5,13 @@
 const CONFIG = {
   MAP_W: 46,
   MAP_H: 74,
-  TILE: 26,             // Basis-Pixelgröße einer Kachel
-  MIN_ZOOM: 0.55,
-  MAX_ZOOM: 2.6,
+  // Isometrische Darstellung: eine Kachel ist eine Raute im Verhältnis 2:1.
+  // Dadurch sieht man von jedem Körper das Dach und genau zwei Seitenwände.
+  TILE_W: 48,           // Breite einer Kachelraute in Pixeln
+  TILE_H: 24,           // Höhe einer Kachelraute
+  STOREY: 13,           // Pixel je Stockwerk
+  MIN_ZOOM: 0.45,
+  MAX_ZOOM: 2.4,
   START_MONEY: 25000,
   DAY_MS: 900,          // Realzeit pro Spieltag bei Geschwindigkeit 1x
   DAYS_PER_MONTH: 30,
@@ -348,6 +352,90 @@ const BUILDINGS = {
     desc:'Gepflasterter Platz zum Verweilen.'
   },
 };
+
+/*  3D-Modelle
+    ------------------------------------------------------------------
+    h      Höhe in Stockwerken (1 Stockwerk = CONFIG.STOREY Pixel)
+    shape  Bauform:
+      box      Quader mit Flachdach          gable   Quader mit Satteldach
+      tower    schlanker Turm                slab    flache Platte
+      wind     Windrad (Mast + Rotor)        solar   Reihen von Solarpaneelen
+      chimney  Halle mit Schornsteinen       tank    Hochbehälter auf Stützen
+      tanks    liegende Rundbecken           dam     Staumauer
+      pool     abgesenktes Becken            field   Sportfläche
+      park     Grünfläche mit Bäumen         water   Wasserfläche
+      lot      Stellfläche mit Autos         shelter Wartehalle mit Dach
+      fountain Brunnen                       statue  Denkmal auf Sockel
+      tree     einzelner Baum                stalls  Marktstände
+      road     Fahrbahn                      cable   Leitungsmast
+    inset  Abstand zum Kachelrand (Anteil einer Kachel)
+    roofC  eigene Dachfarbe (sonst aus der Grundfarbe abgeleitet)
+*/
+const MODELS = {
+  road:            { shape:'road' },
+  bridge:          { shape:'road', bridge:true },
+  cable:           { shape:'cable', h:2.2 },
+
+  familienhaus:    { shape:'gable', h:1.1, inset:0.16, roofC:'#8d4a3c' },
+  reihenhaus:      { shape:'gable', h:1.3, inset:0.12, roofC:'#8d4a3c' },
+  wohnblock:       { shape:'box',   h:2.9, inset:0.12 },
+  hochhaus:        { shape:'tower', h:8.5, inset:0.14 },
+
+  windkraftwerk:   { shape:'wind',  h:5.0 },
+  solarkraftwerk:  { shape:'solar', h:0.6 },
+  kohlekraftwerk:  { shape:'chimney', h:2.4, inset:0.08 },
+  wasserkraftwerk: { shape:'dam',   h:2.0 },
+
+  wasserpumpe:     { shape:'box',   h:1.0, inset:0.18 },
+  wasserturm:      { shape:'tank',  h:4.6 },
+  klaeranlage:     { shape:'tanks', h:0.9 },
+
+  kindergarten:    { shape:'gable', h:1.0, inset:0.14, roofC:'#a8562f' },
+  grundschule:     { shape:'gable', h:1.5, inset:0.10, roofC:'#a8562f' },
+  gymnasium:       { shape:'box',   h:2.1, inset:0.10 },
+  universitaet:    { shape:'box',   h:2.6, inset:0.10 },
+  bibliothek:      { shape:'box',   h:1.6, inset:0.12 },
+
+  arztpraxis:      { shape:'gable', h:1.2, inset:0.16, roofC:'#9c3f46' },
+  krankenhaus:     { shape:'box',   h:3.4, inset:0.10 },
+  apotheke:        { shape:'gable', h:1.1, inset:0.18, roofC:'#9c3f46' },
+
+  polizeiwache:    { shape:'box',   h:1.7, inset:0.12 },
+  feuerwehr:       { shape:'gable', h:1.7, inset:0.10, roofC:'#7d2f20' },
+  gefaengnis:      { shape:'box',   h:2.0, inset:0.06 },
+
+  spielplatz:      { shape:'field', h:0.2, ground:'#6ea75c' },
+  schwimmbad_klein:{ shape:'pool',  h:0.5 },
+  schwimmbad_gross:{ shape:'pool',  h:0.6 },
+  baggersee:       { shape:'water' },
+  sportplatz:      { shape:'field', h:0.15, ground:'#4e9a4a', lines:true },
+  stadtpark:       { shape:'park',  h:0.15 },
+  kino:            { shape:'box',   h:2.1, inset:0.12 },
+
+  bushaltestelle:  { shape:'shelter', h:0.9 },
+  busdepot:        { shape:'box',   h:1.3, inset:0.08 },
+  tramhaltestelle: { shape:'shelter', h:0.9 },
+  bahnhof:         { shape:'box',   h:2.3, inset:0.08 },
+
+  supermarkt:      { shape:'box',   h:1.4, inset:0.08 },
+  kaufhaus:        { shape:'box',   h:2.7, inset:0.08 },
+  bank:            { shape:'box',   h:2.3, inset:0.12 },
+  buero:           { shape:'tower', h:3.6, inset:0.14 },
+  markt:           { shape:'stalls', h:0.9 },
+
+  parkplatz:       { shape:'lot',   h:0.1 },
+  parkhaus:        { shape:'box',   h:2.2, inset:0.08, floors:true },
+
+  brunnen:         { shape:'fountain', h:0.7 },
+  statue:          { shape:'statue',   h:1.5 },
+  blumenbeet:      { shape:'field', h:0.12, ground:'#a8547f' },
+  baumallee:       { shape:'tree',  h:1.6 },
+  plaza:           { shape:'slab',  h:0.12 },
+};
+
+function modelOf(type){
+  return MODELS[type] || { shape:'box', h:1.5, inset:0.12 };
+}
 
 /* Reihenfolge im Baumenü festhalten */
 const BUILD_ORDER = Object.keys(BUILDINGS);

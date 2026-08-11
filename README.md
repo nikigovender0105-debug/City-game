@@ -3,6 +3,11 @@
 Ein Städtebau-Spiel im Stil von *Cities: Skylines*, gebaut fürs Handy im **Hochformat**.
 Läuft komplett im Browser – kein Server, kein Build-Schritt, keine Abhängigkeiten.
 
+Alle Bauten sind räumliche Körper in isometrischer Ansicht: die Kamera blickt
+schräg von oben, so dass von jedem Gebäude das Dach und **genau zwei Seitenwände**
+zu sehen sind. Häuser haben Satteldächer und beleuchtete Fenster, Windräder drehen
+sich, Wassertürme stehen auf Stützen, Bäume sind Kegel.
+
 ## Starten
 
 `index.html` im Browser öffnen. Auf dem Handy: Seite öffnen → „Zum Home-Bildschirm hinzufügen“,
@@ -33,6 +38,7 @@ npx http-server . -p 8080
 | Einen Finger ziehen | Karte verschieben |
 | Zwei Finger | Zoomen und verschieben |
 | Antippen | Bauen bzw. Gebäude-Infos anzeigen |
+| Auf einen Turm tippen | Trifft den Turm, nicht den Boden dahinter |
 | Ziehen (bei Straße, Kabel, Brücke, Baum) | Reihe durchgehend bauen |
 | „Abriss“ + antippen | Gebäude abreißen (35 % Erstattung) |
 
@@ -113,6 +119,19 @@ Gefängnisse und Bildung. Hohe Kriminalität drückt wiederum die Moral.
 5. Rot in der Monatsbilanz? Meist stehen zu viele Kraftwerke herum oder ein Viertel
    hängt am falschen Netz.
 
+## Darstellung
+
+Die Ansicht ist füllratengebunden – die Bildrate hängt an der Zahl der Bildpunkte,
+nicht an der Zahl der Gebäude. Das Spiel misst deshalb den Bildabstand und passt die
+Zeichenauflösung selbsttätig an: auf schwachen Geräten sinkt sie, sobald Luft da ist
+steigt sie wieder. Die Bedienoberfläche bleibt davon unberührt, sie ist gewöhnliches
+HTML und immer gestochen scharf.
+
+Wer das Raster stört, schaltet es im Menü ab – das spart nebenbei ein paar Bilder
+pro Sekunde. Die **Versorgungs-Ansicht** färbt dort ebenfalls die Grundflächen ein:
+rot = kein Straßenanschluss, gelb = kein Strom, blau = kein Wasser,
+orange = Werk hängt an keinem Netz, grün = alles in Ordnung.
+
 ## Speichern
 Über *Menü → Speichern* im `localStorage` des Browsers, zusätzlich alle drei Spieljahre
 automatisch. Beim Start wird ein vorhandener Spielstand geladen.
@@ -125,11 +144,15 @@ css/style.css       Mobiles Layout, Bottom-Sheets, Bedienelemente
 js/config.js        Spielkonstanten und Gebäudekatalog
 js/terrain.js       Kartengenerierung (Fluss, Seen, Wälder)
 js/game.js          Zustand, Bauen, Versorgungsnetze, Simulation
-js/render.js        Canvas-Zeichnung und Kamera
+js/render.js        Isometrische 3D-Darstellung, Kamera, Treffererkennung
 js/input.js         Touch-, Maus- und Gestensteuerung
 js/ui.js            HUD, Menüs, Statistik, Dialoge
 js/main.js          Start und Hauptschleife
 ```
 
 Alle Werte für Balance und neue Gebäude stehen in `js/config.js` – dort lässt sich das
-Spiel ohne Eingriff in die Logik erweitern.
+Spiel ohne Eingriff in die Logik erweitern. Die Tabelle `MODELS` in derselben Datei
+bestimmt Höhe und Bauform jedes Gebäudes; verfügbare Formen sind dort aufgelistet
+(Quader, Satteldach, Turm, Windrad, Solarfeld, Schornsteinhalle, Hochbehälter,
+Rundbecken, Staumauer, Becken, Sportfläche, Grünfläche, Wasserfläche, Stellfläche,
+Wartehalle, Brunnen, Denkmal, Baum, Marktstand, Fahrbahn, Leitungsmast).

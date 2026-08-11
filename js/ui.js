@@ -22,6 +22,13 @@ const UI = (() => {
     return fmt(n) + ' €';
   }
   const pct = n => Math.round(n * 100) + '%';
+  /* Kompakte Zahl für die enge Kopfleiste: 12400 -> "12,4k" */
+  function kurz(n){
+    n = Math.round(n);
+    if(n < 1000) return String(n);
+    if(n < 100000) return (n / 1000).toFixed(1).replace('.', ',').replace(',0', '') + 'k';
+    return Math.round(n / 1000) + 'k';
+  }
 
   /* ---------------------------------------------------------
      Initialisierung
@@ -235,13 +242,14 @@ const UI = (() => {
     $('#statMorale').querySelector('.ic').textContent =
       mo >= 70 ? '😀' : mo >= 50 ? '🙂' : mo >= 30 ? '😐' : '😠';
 
-    // Anzeige immer "verfügbar/benötigt" – wie in der Stadtübersicht
+    // Anzeige immer "verfügbar/benötigt" – wie in der Stadtübersicht.
+    // Ab vierstelligen Werten gekürzt, sonst passt die Zeile nicht mehr.
     const pV = $('#statPower').querySelector('.val');
-    pV.textContent = `${fmt(s.power.supply)}/${fmt(s.power.demand)}`;
+    pV.textContent = `${kurz(s.power.supply)}/${kurz(s.power.demand)}`;
     pV.className = 'val' + (s.power.demand > s.power.supply ? ' bad' : '');
 
     const wV = $('#statWater').querySelector('.val');
-    wV.textContent = `${fmt(s.water.supply)}/${fmt(s.water.demand)}`;
+    wV.textContent = `${kurz(s.water.supply)}/${kurz(s.water.demand)}`;
     wV.className = 'val' + (s.water.demand > s.water.supply ? ' bad' : '');
 
     $('#dateLabel').textContent = Game.dateLabel();

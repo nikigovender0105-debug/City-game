@@ -179,15 +179,19 @@ const Input = (() => {
       return;
     }
 
+    // Ein hohes Gebäude verdeckt die Kacheln hinter sich. Getroffen ist,
+    // was man sieht – deshalb erst die Silhouetten prüfen, dann den Boden.
+    const hit = Render.pickBuilding(sx, sy);
+
     if(mode === 'bulldoze'){
-      const res = Game.demolishAt(tx, ty);
+      const res = hit ? Game.demolishAt(hit.x, hit.y) : Game.demolishAt(tx, ty);
       if(res.ok) cb.onDemolish && cb.onDemolish(res);
       else if(res.reason) cb.onFail && cb.onFail(res.reason);
       return;
     }
 
     // Ansichtsmodus: Gebäude auswählen
-    const b = Game.buildingAt(tx, ty);
+    const b = hit || Game.buildingAt(tx, ty);
     Render.setSelected(b || null);
     cb.onTap && cb.onTap(b, tx, ty);
   }
@@ -198,7 +202,12 @@ const Input = (() => {
     if(!Game.inBounds(tx, ty)) return;
 
     if(lastPaint && (lastPaint[0] !== tx || lastPaint[1] !== ty)){
-      lineTiles(lastPaint[0], lastPaint[1], tx, ty, (x, y) => tryPaint(x, y));
+      // Die Startkachel des Abschnitts wurde im vorigen Schritt schon gesetzt
+      let first = true;
+      lineTiles(lastPaint[0], lastPaint[1], tx, ty, (x, y) => {
+        if(first){ first = false; return; }
+        tryPaint(x, y);
+      });
     }else if(!lastPaint){
       tryPaint(tx, ty);
     }
