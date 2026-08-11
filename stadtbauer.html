@@ -488,6 +488,34 @@ ul.help{ margin:6px 0; padding-left:18px; font-size:11.5px; color:var(--txt-dim)
 </div>
 
 <script>
+/* Sicherheitsnetz: Wird index.html allein geöffnet (z. B. aus dem Download-Ordner),
+   fehlen css/ und js/ – die Seite sähe dann aus wie ein Trümmerfeld. Lieber klar sagen,
+   was los ist. In stadtbauer.html ist alles eingebettet, dort greift die Prüfung nie. */
+window.addEventListener('load', function(){
+  var scrim = document.getElementById('scrim');
+  var cssOK = scrim && getComputedStyle(scrim).position === 'fixed';
+  var jsOK  = typeof Game !== 'undefined' && typeof UI !== 'undefined';
+  if(cssOK && jsOK) return;
+
+  var fehlt = [];
+  if(!cssOK) fehlt.push('css/style.css');
+  if(!jsOK)  fehlt.push('js/ (7 Dateien)');
+
+  document.body.innerHTML =
+    '<div style="font:15px/1.6 -apple-system,BlinkMacSystemFont,Roboto,sans-serif;' +
+    'background:#0f131a;color:#e8edf6;min-height:100vh;margin:0;padding:28px 22px;' +
+    '-webkit-text-size-adjust:100%">' +
+    '<h2 style="margin:0 0 14px;font-size:19px">🏙️ Stadtbauer lässt sich so nicht starten</h2>' +
+    '<p style="color:#93a0b8;margin:0 0 16px">Diese Datei ist nur das Gerüst. Es fehlt: <b style="color:#ff6b6b">' +
+    fehlt.join('</b>, <b style="color:#ff6b6b">') + '</b></p>' +
+    '<p style="margin:0 0 10px"><b>Am einfachsten:</b> nimm stattdessen <b style="color:#4ea8ff">stadtbauer.html</b>. ' +
+    'Da stecken CSS und JavaScript schon in der Datei drin – einfach öffnen, fertig.</p>' +
+    '<p style="color:#93a0b8;margin:0">Wenn du index.html benutzen willst, müssen der Ordner <b>css/</b> ' +
+    'und der Ordner <b>js/</b> direkt daneben liegen.</p>' +
+    '</div>';
+});
+</script>
+<script>
 /* ===== js/config.js ===== */
 /* ==========================================================
    config.js – Spielkonstanten & Gebäudekatalog
